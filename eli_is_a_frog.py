@@ -2583,7 +2583,7 @@ class TransitionManager:
         self.active = True
         self.transition_type = transition_type
         self.progress = 0
-        self.duration = duration
+        self.duration = max(1, duration)  # Prevent division by zero
         self.center_x = center_x if center_x else WIDTH / 2
         self.center_y = center_y if center_y else HEIGHT / 2
 
@@ -3030,8 +3030,8 @@ class Scene:
     """Base scene class"""
     def __init__(self, start: int, duration: int):
         self.start = start
-        self.end = start + duration
-        self.duration = duration
+        self.duration = max(1, duration)  # Prevent division by zero
+        self.end = start + self.duration
 
     def progress(self, frame: int) -> float:
         return clamp((frame - self.start) / self.duration, 0, 1)
