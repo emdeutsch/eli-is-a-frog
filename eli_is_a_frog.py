@@ -1501,6 +1501,148 @@ class LightingSystem:
 
         return f'#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}'
 
+    def render_god_rays(self, ax, frame: int, source_x: float = None, source_y: float = None,
+                        color: str = '#FFD700', intensity: float = 0.3, num_rays: int = 8):
+        """Render cinematic god rays / volumetric light shafts"""
+        if source_x is None:
+            # Default to sun position
+            time_data = self.TIME_COLORS[self.current_time]
+            sun_pos = time_data['sun_pos']
+            if sun_pos <= 0:
+                return  # No god rays at night
+            source_x = WIDTH * sun_pos
+            source_y = HEIGHT * (0.5 + 0.4 * np.sin(sun_pos * np.pi))
+
+        # Parse color
+        r = int(color.lstrip('#')[0:2], 16) / 255
+        g = int(color.lstrip('#')[2:4], 16) / 255
+        b = int(color.lstrip('#')[4:6], 16) / 255
+
+        # Create volumetric light shafts
+        for i in range(num_rays):
+            # Each ray has different angle and animation phase
+            base_angle = (i / num_rays) * np.pi * 0.6 - np.pi * 0.3  # Spread downward
+            angle_wobble = np.sin(frame * 0.02 + i * 1.5) * 0.05
+            angle = base_angle + angle_wobble - np.pi / 2  # Point downward
+
+            # Ray properties vary over time
+            ray_alpha = intensity * (0.5 + 0.5 * np.sin(frame * 0.015 + i * 0.7))
+            ray_length = HEIGHT * 0.8 * (0.8 + 0.2 * np.sin(frame * 0.01 + i))
+            ray_width = 40 + 20 * np.sin(frame * 0.025 + i * 1.2)
+
+            # Calculate ray endpoints
+            end_x = source_x + np.cos(angle) * ray_length
+            end_y = source_y + np.sin(angle) * ray_length
+
+            # Draw tapered ray using polygon
+            perp_x = np.cos(angle + np.pi/2)
+            perp_y = np.sin(angle + np.pi/2)
+
+            # Ray gets wider as it goes down
+            top_width = ray_width * 0.3
+            bottom_width = ray_width * 2
+
+            vertices = [
+                (source_x + perp_x * top_width, source_y + perp_y * top_width),
+                (source_x - perp_x * top_width, source_y - perp_y * top_width),
+                (end_x - perp_x * bottom_width, end_y - perp_y * bottom_width),
+                (end_x + perp_x * bottom_width, end_y + perp_y * bottom_width),
+            ]
+
+            ray_patch = patches.Polygon(vertices, closed=True,
+                                        facecolor=(r, g, b, clamp(ray_alpha * 0.15, 0, 0.3)),
+                                        edgecolor='none', zorder=4)
+            ax.add_patch(ray_patch)
+
+            # Add inner brighter core
+            core_vertices = [
+                (source_x + perp_x * top_width * 0.3, source_y + perp_y * top_width * 0.3),
+                (source_x - perp_x * top_width * 0.3, source_y - perp_y * top_width * 0.3),
+                (end_x - perp_x * bottom_width * 0.5, end_y - perp_y * bottom_width * 0.5),
+                (end_x + perp_x * bottom_width * 0.5, end_y + perp_y * bottom_width * 0.5),
+            ]
+            core_patch = patches.Polygon(core_vertices, closed=True,
+                                         facecolor=(1, 1, 1, clamp(ray_alpha * 0.08, 0, 0.15)),
+                                         edgecolor='none', zorder=5)
+            ax.add_patch(core_patch)
+
+    def render_vignette(self, ax, intensity: float = 0.4, color: str = 'black'):
+        """Render cinematic vignette effect for atmospheric depth"""
+        if intensity < 0.01:
+            return
+
+        # Create smooth radial vignette using concentric ellipses
+        center_x, center_y = WIDTH / 2, HEIGHT / 2
+        max_radius = np.sqrt(WIDTH**2 + HEIGHT**2) / 2
+
+        num_layers = 15
+        for i in range(num_layers):
+            # Progress from edge (0) to center (1)
+            t = i / num_layers
+
+            # Ellipse gets smaller toward center
+            radius_x = WIDTH * (0.6 + t * 0.5)
+            radius_y = HEIGHT * (0.6 + t * 0.5)
+
+            # Alpha decreases toward center (more opaque at edges)
+            layer_alpha = intensity * (1 - t) ** 2 * 0.12
+
+            vignette = patches.Ellipse((center_x, center_y), radius_x * 2, radius_y * 2,
+                                       fill=False, edgecolor=color,
+                                       linewidth=80, alpha=clamp(layer_alpha, 0, 0.3),
+                                       zorder=950)
+            ax.add_patch(vignette)
+
+    def render_lens_flare(self, ax, frame: int, source_x: float, source_y: float,
+                          intensity: float = 0.5):
+        """Render cinematic lens flare effect"""
+        # Calculate flare line from source through center
+        center_x, center_y = WIDTH / 2, HEIGHT / 2
+        dx = center_x - source_x
+        dy = center_y - source_y
+
+        # Normalize direction
+        dist = np.sqrt(dx**2 + dy**2)
+        if dist < 1:
+            return
+        dx /= dist
+        dy /= dist
+
+        # Flare elements along the line
+        flare_colors = ['#FFD700', '#FF6B4A', '#00BFFF', '#FF69B4', '#FFFFFF']
+        flare_sizes = [30, 20, 45, 15, 25]
+        flare_positions = [0.3, 0.5, 0.7, 0.85, 1.0]
+
+        for i, (color, size, pos) in enumerate(zip(flare_colors, flare_sizes, flare_positions)):
+            flare_x = source_x + dx * dist * pos * 1.5
+            flare_y = source_y + dy * dist * pos * 1.5
+
+            # Pulsing size
+            pulse = 1 + 0.2 * np.sin(frame * 0.05 + i * 1.5)
+
+            # Hexagonal flare shape for some elements
+            if i % 2 == 0:
+                flare = patches.RegularPolygon((flare_x, flare_y), numVertices=6,
+                                               radius=size * pulse,
+                                               facecolor=color,
+                                               alpha=clamp(intensity * 0.3 * (1 - pos * 0.5), 0, 0.4),
+                                               zorder=960)
+            else:
+                flare = patches.Circle((flare_x, flare_y), size * pulse * 0.7,
+                                       facecolor=color,
+                                       alpha=clamp(intensity * 0.25 * (1 - pos * 0.5), 0, 0.35),
+                                       zorder=960)
+            ax.add_patch(flare)
+
+        # Anamorphic flare streak (horizontal light streak)
+        streak_width = 300 * intensity
+        streak_height = 8
+        streak = patches.Rectangle((source_x - streak_width, source_y - streak_height/2),
+                                   streak_width * 2, streak_height,
+                                   facecolor='#ADD8E6', alpha=clamp(intensity * 0.4, 0, 0.5),
+                                   zorder=955)
+        ax.add_patch(streak)
+
 
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
 # ║                         CHARACTER SYSTEM                                      ║
@@ -3369,6 +3511,21 @@ class BattleScene(Scene):
         # Render slow-mo effects
         ctx['slowmo'].render_effects(ax)
 
+        # CINEMATIC EFFECTS - god rays during dramatic moments
+        if p > 0.5:
+            # Hero power glow creates god rays
+            ctx['lighting'].render_god_rays(ax, frame, hero_x, hero_y + 50,
+                                           color='#00FF7F', intensity=0.2 * (p - 0.5) * 2, num_rays=6)
+
+        # Lens flare during finishing blow
+        if 0.82 < p < 0.88:
+            flare_intensity = 1 - abs(p - 0.85) / 0.03
+            ctx['lighting'].render_lens_flare(ax, frame, hero_x, hero_y, flare_intensity * 0.6)
+
+        # Dramatic vignette throughout battle, intensifies during slow-mo
+        vignette_intensity = 0.3 if not self.slowmo_triggered else 0.6
+        ctx['lighting'].render_vignette(ax, vignette_intensity)
+
         # Health bars with pulsing effect when low
         boss_hp = max(0, 100 - p * 105)
         pulse = 1.0 if boss_hp > 20 else 1.0 + np.sin(local * 0.3) * 0.1
@@ -3512,6 +3669,18 @@ class HeroicRiseScene(Scene):
                 py = HEIGHT * 0.5 + np.sin(angle) * 100
                 ctx['particles'].emit_magic(px, py, 'gold', 1.0)
 
+            # CINEMATIC EFFECTS - god rays emanating from Eli
+            ctx['lighting'].render_god_rays(ax, frame, WIDTH * 0.5, HEIGHT * 0.5 + 100,
+                                           color='#FFD700', intensity=0.5, num_rays=10)
+
+            # Lens flare from power
+            ctx['lighting'].render_lens_flare(ax, frame, WIDTH * 0.5, HEIGHT * 0.5,
+                                             intensity=0.4 + power_p * 0.3)
+
+        # Vignette throughout - darkness at edges focuses attention on Eli
+        vignette_strength = 0.5 if p < 0.65 else max(0.2, 0.5 - (p - 0.65) * 1.5)
+        ctx['lighting'].render_vignette(ax, vignette_strength)
+
 
 class WeddingScene(Scene):
     """Beautiful wedding between Eli and Luna - the happy ending"""
@@ -3616,6 +3785,19 @@ class WeddingScene(Scene):
                 ctx['particles'].emit_magic(np.random.uniform(100, WIDTH-100),
                                            HEIGHT * 0.9, 'gold', 0.8)
 
+        # CINEMATIC EFFECTS - soft god rays for romantic atmosphere
+        ctx['lighting'].render_god_rays(ax, frame, WIDTH * 0.85, HEIGHT * 0.9,
+                                       color='#FFB6C1', intensity=0.25, num_rays=6)
+
+        # Soft pink vignette for romantic mood
+        ctx['lighting'].render_vignette(ax, 0.25, color='#4A0020')
+
+        # Lens flare during kiss
+        if 0.45 < p < 0.65:
+            kiss_flare = 1 - abs(p - 0.55) / 0.1
+            ctx['lighting'].render_lens_flare(ax, frame, WIDTH * 0.5, HEIGHT * 0.35,
+                                             intensity=kiss_flare * 0.4)
+
 
 class CreditsScene(Scene):
     """Rolling credits"""
@@ -3650,6 +3832,511 @@ class CreditsScene(Scene):
             frog.emotion = Emotion.HAPPY
             frog.has_crown = True
             frog.render(ax, local)
+
+
+class MentorSacrificeScene(Scene):
+    """Sage the Wise Turtle sacrifices himself to save Eli - tearjerker moment"""
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+
+        # Dramatic dark battlefield
+        ax.set_facecolor('#0a0505')
+
+        # Storm clouds
+        for i in range(8):
+            cloud_x = (local * 0.3 + i * 250) % (WIDTH + 300) - 150
+            cloud_y = HEIGHT * (0.7 + i * 0.03)
+            ax.add_patch(patches.Ellipse((cloud_x, cloud_y), 400, 100,
+                        color='#1a0a0a', alpha=0.8, zorder=2))
+
+        # Lightning flashes
+        if local % 60 < 3:
+            ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT,
+                        color='white', alpha=0.3, zorder=100))
+            ctx['camera'].shake(10, 0.9)
+
+        # Phase 1: Dark One attacks Eli (0-25%)
+        if p < 0.25:
+            attack_p = p / 0.25
+
+            # Dark One charging attack
+            dark_one = TheDarkOne(WIDTH * 0.7, HEIGHT * 0.5, 2.0)
+            dark_one.render(ax, local)
+
+            # Dark energy beam charging
+            beam_intensity = Easing.ease_in_cubic(attack_p)
+            for i in range(5):
+                ax.add_patch(patches.Circle((WIDTH * 0.7, HEIGHT * 0.5), 50 + i * 20 + beam_intensity * 100,
+                            color='#4B0082', alpha=0.3 - i * 0.05, zorder=30))
+
+            # Eli in danger
+            eli = Frog(WIDTH * 0.3, HEIGHT * 0.25, 1.0)
+            eli.emotion = Emotion.SHOCKED
+            eli.render(ax, local)
+
+            # Sage watching with concern
+            sage = WiseTurtle(WIDTH * 0.15, HEIGHT * 0.3, 1.2)
+            sage.render(ax, local)
+
+            # Warning text
+            if attack_p > 0.7:
+                ax.text(WIDTH/2, HEIGHT * 0.85, "ELI, LOOK OUT!",
+                       fontsize=32, ha='center', color='#FF0000',
+                       alpha=(attack_p - 0.7) / 0.3, fontweight='bold', zorder=200)
+
+        # Phase 2: Sage jumps in front (25-40%)
+        elif p < 0.4:
+            jump_p = (p - 0.25) / 0.15
+            eased = Easing.ease_out_cubic(jump_p)
+
+            # Dark One firing
+            dark_one = TheDarkOne(WIDTH * 0.7, HEIGHT * 0.5, 2.0)
+            dark_one.render(ax, local)
+
+            # Dark beam
+            beam_width = 60
+            ax.add_patch(patches.Rectangle((WIDTH * 0.35, HEIGHT * 0.45), WIDTH * 0.35, beam_width,
+                        color='#8B0000', alpha=0.8, zorder=50))
+            ax.add_patch(patches.Rectangle((WIDTH * 0.35, HEIGHT * 0.45 + 10), WIDTH * 0.35, beam_width - 20,
+                        color='#FF0000', alpha=0.6, zorder=51))
+
+            # Sage jumping into the beam's path
+            sage_x = lerp(WIDTH * 0.15, WIDTH * 0.35, eased)
+            sage_y = HEIGHT * 0.3 + np.sin(eased * np.pi) * 100
+            sage = WiseTurtle(sage_x, sage_y, 1.2)
+            sage.render(ax, local)
+
+            # Eli behind
+            eli = Frog(WIDTH * 0.3, HEIGHT * 0.25, 1.0)
+            eli.emotion = Emotion.SHOCKED
+            eli.render(ax, local)
+
+            # SLOW MOTION
+            if jump_p > 0.3 and jump_p < 0.9:
+                ctx['slowmo'].enter_slowmo(0.2, with_vignette=True)
+
+        # Phase 3: Impact - Sage takes the hit (40-55%)
+        elif p < 0.55:
+            impact_p = (p - 0.4) / 0.15
+            ctx['slowmo'].exit_slowmo()
+
+            # Massive screen shake
+            ctx['camera'].shake(30, 0.85)
+
+            # Explosion of light
+            for i in range(10):
+                ax.add_patch(patches.Circle((WIDTH * 0.35, HEIGHT * 0.35), 50 + impact_p * 200 + i * 30,
+                            fill=False, edgecolor='#FFD700', linewidth=4 - i * 0.3,
+                            alpha=max(0, 0.8 - impact_p - i * 0.07), zorder=60))
+
+            # Sage hit
+            sage = WiseTurtle(WIDTH * 0.35, HEIGHT * 0.3 - impact_p * 50, 1.2)
+            sage.alpha = 1.0 - impact_p * 0.3
+            sage.render(ax, local)
+
+            # Dark One recoiling
+            dark_one = TheDarkOne(WIDTH * 0.75 + impact_p * 30, HEIGHT * 0.5, 2.0)
+            dark_one.render(ax, local)
+
+            # Eli reaching out
+            eli = Frog(WIDTH * 0.25 + impact_p * 20, HEIGHT * 0.25, 1.0)
+            eli.emotion = Emotion.SAD
+            eli.render(ax, local)
+
+            # "NOOO!" text
+            ax.text(WIDTH/2, HEIGHT * 0.8, "NOOOOO!",
+                   fontsize=int(40 + impact_p * 20), ha='center', color='#FFFFFF',
+                   alpha=1 - impact_p * 0.5, fontweight='bold', zorder=200)
+
+            if local % 3 == 0:
+                ctx['particles'].emit_magic(WIDTH * 0.35 + np.random.randn() * 50,
+                                           HEIGHT * 0.35 + np.random.randn() * 30, 'gold', 2.0)
+
+        # Phase 4: Sage's final words (55-85%)
+        elif p < 0.85:
+            words_p = (p - 0.55) / 0.3
+
+            # Gentle lighting now
+            ax.set_facecolor('#0a0510')
+
+            # Sage on ground, glowing
+            sage = WiseTurtle(WIDTH * 0.4, HEIGHT * 0.2, 1.0)
+            sage.alpha = 0.8 - words_p * 0.4
+            # Golden glow around Sage
+            for i in range(5):
+                ax.add_patch(patches.Circle((WIDTH * 0.4, HEIGHT * 0.22), 80 + i * 20,
+                            color='#FFD700', alpha=0.1 - i * 0.015, zorder=5))
+            sage.render(ax, local)
+
+            # Eli kneeling beside
+            eli = Frog(WIDTH * 0.5, HEIGHT * 0.22, 1.0)
+            eli.emotion = Emotion.SAD
+            eli.render(ax, local)
+
+            # Luna crying nearby
+            luna = Frog(WIDTH * 0.6, HEIGHT * 0.25, 0.8, 'princess', 'Luna')
+            luna.emotion = Emotion.SAD
+            luna.alpha = 0.7
+            luna.render(ax, local)
+
+            # Sage's final words appearing
+            words = [
+                "You have... the heart of a true guardian...",
+                "The prophecy... chose well...",
+                "Protect them... Eli...",
+                "I believe... in you..."
+            ]
+            word_idx = min(int(words_p * len(words)), len(words) - 1)
+            word_alpha = (words_p * len(words)) % 1
+
+            ax.text(WIDTH/2, HEIGHT * 0.7, words[word_idx],
+                   fontsize=24, ha='center', color='#FFD700',
+                   alpha=0.5 + word_alpha * 0.5, style='italic', zorder=100)
+
+            # Floating particles (soul leaving)
+            if local % 5 == 0:
+                ctx['particles'].emit_magic(WIDTH * 0.4 + np.random.randn() * 30,
+                                           HEIGHT * 0.25 + words_p * 100, 'gold', 0.5)
+
+        # Phase 5: Sage fades away, Eli gains power (85-100%)
+        else:
+            fade_p = (p - 0.85) / 0.15
+
+            # Sage dissolving into light
+            if fade_p < 0.5:
+                sage_alpha = 1 - fade_p * 2
+                sage = WiseTurtle(WIDTH * 0.4, HEIGHT * 0.2 + fade_p * 50, 1.0)
+                sage.alpha = sage_alpha * 0.5
+                sage.render(ax, local)
+
+            # Golden particles rising
+            for i in range(20):
+                py = HEIGHT * 0.2 + fade_p * HEIGHT * 0.6 + np.sin(local * 0.1 + i) * 30
+                px = WIDTH * 0.4 + np.sin(local * 0.05 + i * 0.5) * (50 + fade_p * 100)
+                size = 10 + np.random.rand() * 10
+                ax.scatter([px], [py], c='#FFD700', s=size, alpha=0.5 - fade_p * 0.3, zorder=50)
+
+            # Eli absorbing the power
+            eli = Frog(WIDTH * 0.5, HEIGHT * 0.25, 1.0 + fade_p * 0.3)
+            eli.emotion = Emotion.DETERMINED
+            eli.set_glow(True, '#FFD700', fade_p)
+            eli.render(ax, local)
+
+            # "I won't let you down" text
+            if fade_p > 0.3:
+                text_alpha = (fade_p - 0.3) / 0.7
+                ax.text(WIDTH/2, HEIGHT * 0.8, "I won't let you down, Sage...",
+                       fontsize=28, ha='center', color='#90EE90',
+                       alpha=text_alpha, style='italic', zorder=100)
+
+            # Screen gradually brightening with determination
+            ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT,
+                        color='#FFD700', alpha=fade_p * 0.2, zorder=200))
+
+
+class VillainOriginScene(Scene):
+    """The Dark One's tragic backstory - he was once good"""
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+
+        # Sepia/desaturated flashback look
+        ax.set_facecolor('#2a2015')
+
+        # Vignette effect
+        for i in range(6):
+            ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT,
+                        fill=False, edgecolor='#1a1510', linewidth=80 * (1 - i/6),
+                        alpha=0.2, zorder=100))
+
+        # Phase 1: Young Dark One (he was once a guardian) (0-35%)
+        if p < 0.35:
+            show_p = p / 0.35
+
+            ax.text(WIDTH/2, HEIGHT * 0.9, "1000 Years Ago...",
+                   fontsize=20, ha='center', color='#888866', alpha=show_p, zorder=50)
+
+            # Beautiful peaceful village
+            ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT * 0.3, color='#3a5a30', zorder=2))
+
+            # Sun
+            ax.add_patch(patches.Circle((WIDTH * 0.8, HEIGHT * 0.85), 60,
+                        color='#FFD700', alpha=0.7, zorder=3))
+
+            # Young version (shown as a noble frog, before corruption)
+            young_villain = Frog(WIDTH * 0.5, HEIGHT * 0.25, 1.3)
+            young_villain.emotion = Emotion.HAPPY
+            young_villain.has_crown = True
+            young_villain.set_glow(True, '#00FF7F', 0.3)  # He was green/good!
+            young_villain.render(ax, local)
+
+            ax.text(WIDTH/2, HEIGHT * 0.6, "He was once the Emerald Guardian...",
+                   fontsize=22, ha='center', color='#90EE90', alpha=show_p, style='italic', zorder=50)
+
+        # Phase 2: Tragedy strikes (35-60%)
+        elif p < 0.6:
+            tragedy_p = (p - 0.35) / 0.25
+
+            # Darkening sky
+            darkness = tragedy_p * 0.5
+            ax.set_facecolor(f'#{int(42 - darkness*30):02x}{int(32 - darkness*25):02x}{int(21 - darkness*15):02x}')
+
+            # Fire and destruction
+            for i in range(10):
+                fire_x = np.random.uniform(0, WIDTH)
+                fire_y = np.random.uniform(HEIGHT * 0.1, HEIGHT * 0.4)
+                ax.add_patch(patches.Circle((fire_x, fire_y), 20 + np.random.rand() * 30,
+                            color='#FF4500', alpha=0.3 + tragedy_p * 0.3, zorder=10))
+
+            # His love dying in his arms
+            villain = Frog(WIDTH * 0.45, HEIGHT * 0.2, 1.2)
+            villain.emotion = Emotion.SAD
+            villain.render(ax, local)
+
+            # Fallen loved one
+            fallen = Frog(WIDTH * 0.55, HEIGHT * 0.15, 0.9, 'princess')
+            fallen.emotion = Emotion.SAD
+            fallen.alpha = 0.5 - tragedy_p * 0.3
+            fallen.render(ax, local)
+
+            ax.text(WIDTH/2, HEIGHT * 0.7, "But he lost everything he loved...",
+                   fontsize=22, ha='center', color='#FF6666', alpha=tragedy_p, style='italic', zorder=50)
+
+            if local % 8 == 0:
+                ctx['particles'].emit_fire(np.random.uniform(100, WIDTH-100), HEIGHT * 0.3, 1.0)
+
+        # Phase 3: The corruption (60-85%)
+        elif p < 0.85:
+            corrupt_p = (p - 0.6) / 0.25
+
+            # Dark, twisted background
+            ax.set_facecolor('#0a0510')
+
+            # Swirling darkness
+            for i in range(15):
+                angle = (i / 15) * 2 * np.pi + local * 0.02
+                dist = 150 + corrupt_p * 100 + np.sin(local * 0.05 + i) * 30
+                sx = WIDTH * 0.5 + np.cos(angle) * dist
+                sy = HEIGHT * 0.4 + np.sin(angle) * dist * 0.5
+                ax.add_patch(patches.Circle((sx, sy), 30 + corrupt_p * 20,
+                            color='#2d0a4e', alpha=0.4, zorder=5))
+
+            # Transforming - frog becoming The Dark One
+            if corrupt_p < 0.5:
+                # Still somewhat frog-like
+                trans_frog = Frog(WIDTH * 0.5, HEIGHT * 0.35, 1.3 + corrupt_p * 0.5)
+                trans_frog.emotion = Emotion.ANGRY
+                trans_frog.body_color = f'#{int(50 - corrupt_p * 80):02x}{int(205 - corrupt_p * 200):02x}{int(50 - corrupt_p * 80):02x}'
+                trans_frog.set_glow(True, '#4B0082', corrupt_p)
+                trans_frog.render(ax, local)
+            else:
+                # Becoming The Dark One
+                dark_one = TheDarkOne(WIDTH * 0.5, HEIGHT * 0.4, 1.5 + (corrupt_p - 0.5) * 1.5)
+                dark_one.alpha = (corrupt_p - 0.5) * 2
+                dark_one.render(ax, local)
+
+            ax.text(WIDTH/2, HEIGHT * 0.8, "Grief twisted his heart to darkness...",
+                   fontsize=22, ha='center', color='#8B0000', alpha=corrupt_p, style='italic', zorder=50)
+
+            ctx['camera'].shake(corrupt_p * 10, 0.95)
+
+        # Phase 4: The monster he became (85-100%)
+        else:
+            monster_p = (p - 0.85) / 0.15
+
+            ax.set_facecolor('#050008')
+
+            # Full Dark One in all his terrible glory
+            dark_one = TheDarkOne(WIDTH * 0.5, HEIGHT * 0.45, 2.5)
+            dark_one.render(ax, local)
+
+            # Menacing aura
+            for i in range(8):
+                ax.add_patch(patches.Circle((WIDTH * 0.5, HEIGHT * 0.45), 200 + i * 40,
+                            fill=False, edgecolor='#4B0082', linewidth=3,
+                            alpha=0.3 - i * 0.03, zorder=3))
+
+            # Dark particles
+            if local % 4 == 0:
+                ctx['particles'].emit_dark_energy(WIDTH * 0.5, HEIGHT * 0.45, 1.5)
+
+            ax.text(WIDTH/2, HEIGHT * 0.85, "And swore to destroy all hope...",
+                   fontsize=24, ha='center', color='#FF0000', alpha=monster_p, fontweight='bold', zorder=50)
+
+
+class EpicClimaxScene(Scene):
+    """The final clash - Eli vs Dark One with MAXIMUM drama"""
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+
+        # Apocalyptic sky
+        for i in range(10):
+            y = HEIGHT * i / 10
+            t = i / 10
+            r = int(lerp(20, 80, t) + np.sin(local * 0.05) * 10)
+            g = int(lerp(5, 20, t))
+            b = int(lerp(30, 60, t))
+            ax.add_patch(patches.Rectangle((0, y), WIDTH, HEIGHT/10 + 1,
+                        color=f'#{clamp(r, 0, 255):02x}{clamp(g, 0, 255):02x}{clamp(b, 0, 255):02x}', zorder=1))
+
+        # Epic lightning
+        if local % 45 < 2:
+            ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT, color='white', alpha=0.5, zorder=500))
+            ctx['camera'].shake(15, 0.9)
+
+        # Floating debris
+        np.random.seed(42)
+        for i in range(20):
+            dx = (np.random.rand() * WIDTH + local * (0.5 + np.random.rand())) % WIDTH
+            dy = np.random.rand() * HEIGHT * 0.6 + HEIGHT * 0.1
+            size = 10 + np.random.rand() * 20
+            ax.add_patch(patches.Polygon([
+                [dx, dy], [dx + size, dy + size/2], [dx + size/2, dy + size]
+            ], color='#333', alpha=0.6, zorder=5))
+
+        # Phase 1: Both charging up (0-30%)
+        if p < 0.3:
+            charge_p = p / 0.3
+
+            # Eli on left, powering up
+            eli = Frog(WIDTH * 0.25, HEIGHT * 0.35, 1.3 + charge_p * 0.3)
+            eli.emotion = Emotion.POWERFUL
+            eli.has_crown = True
+            eli.set_glow(True, '#00FF7F', charge_p)
+            eli.render(ax, local)
+
+            # Green energy spiraling around Eli
+            for i in range(12):
+                angle = (i / 12) * 2 * np.pi + local * 0.1
+                dist = 60 + charge_p * 80 + np.sin(local * 0.2 + i) * 20
+                ex = WIDTH * 0.25 + np.cos(angle) * dist
+                ey = HEIGHT * 0.35 + np.sin(angle) * dist * 0.6
+                ax.scatter([ex], [ey], c='#00FF7F', s=30 + charge_p * 50, alpha=0.7, zorder=40)
+
+            # Dark One on right
+            dark_one = TheDarkOne(WIDTH * 0.75, HEIGHT * 0.45, 2.0 + charge_p * 0.5)
+            dark_one.render(ax, local)
+
+            # Purple energy around Dark One
+            for i in range(12):
+                angle = (i / 12) * 2 * np.pi - local * 0.08
+                dist = 80 + charge_p * 100
+                vx = WIDTH * 0.75 + np.cos(angle) * dist
+                vy = HEIGHT * 0.45 + np.sin(angle) * dist * 0.5
+                ax.scatter([vx], [vy], c='#8B0000', s=40 + charge_p * 60, alpha=0.7, zorder=40)
+
+            # "THIS ENDS NOW" text
+            if charge_p > 0.5:
+                ax.text(WIDTH/2, HEIGHT * 0.85, "THIS ENDS NOW!",
+                       fontsize=36, ha='center', color='#FFD700',
+                       alpha=(charge_p - 0.5) * 2, fontweight='bold', zorder=100)
+
+        # Phase 2: BEAM CLASH! (30-70%)
+        elif p < 0.7:
+            clash_p = (p - 0.3) / 0.4
+
+            # Eli firing green beam
+            eli = Frog(WIDTH * 0.2, HEIGHT * 0.35, 1.5)
+            eli.emotion = Emotion.POWERFUL
+            eli.has_crown = True
+            eli.set_glow(True, '#00FF7F', 1.0)
+            eli.render(ax, local)
+
+            # Dark One firing dark beam
+            dark_one = TheDarkOne(WIDTH * 0.8, HEIGHT * 0.45, 2.2)
+            dark_one.render(ax, local)
+
+            # THE BEAMS!
+            clash_x = WIDTH * 0.5 + np.sin(local * 0.1) * 30 * (0.5 - abs(clash_p - 0.5))
+
+            # Green beam (Eli's)
+            beam_height = 80
+            ax.add_patch(patches.Polygon([
+                [WIDTH * 0.25, HEIGHT * 0.35],
+                [clash_x, HEIGHT * 0.4 + beam_height/2],
+                [clash_x, HEIGHT * 0.4 - beam_height/2]
+            ], color='#00FF7F', alpha=0.8, zorder=60))
+            ax.add_patch(patches.Polygon([
+                [WIDTH * 0.25, HEIGHT * 0.35],
+                [clash_x, HEIGHT * 0.4 + beam_height/3],
+                [clash_x, HEIGHT * 0.4 - beam_height/3]
+            ], color='#90EE90', alpha=0.9, zorder=61))
+
+            # Dark beam
+            ax.add_patch(patches.Polygon([
+                [WIDTH * 0.75, HEIGHT * 0.45],
+                [clash_x, HEIGHT * 0.4 + beam_height/2],
+                [clash_x, HEIGHT * 0.4 - beam_height/2]
+            ], color='#4B0082', alpha=0.8, zorder=60))
+            ax.add_patch(patches.Polygon([
+                [WIDTH * 0.75, HEIGHT * 0.45],
+                [clash_x, HEIGHT * 0.4 + beam_height/3],
+                [clash_x, HEIGHT * 0.4 - beam_height/3]
+            ], color='#8B0000', alpha=0.9, zorder=61))
+
+            # Clash point explosion
+            for i in range(8):
+                ax.add_patch(patches.Circle((clash_x, HEIGHT * 0.4), 30 + i * 15,
+                            fill=False, edgecolor='#FFFFFF', linewidth=3,
+                            alpha=0.5 - i * 0.05, zorder=70))
+
+            # Massive particles at clash
+            if local % 2 == 0:
+                ctx['particles'].emit_magic(clash_x + np.random.randn() * 30,
+                                           HEIGHT * 0.4 + np.random.randn() * 30, 'white', 2.0)
+
+            # Screen shake throughout
+            ctx['camera'].shake(20, 0.92)
+
+            # Eli winning towards the end
+            if clash_p > 0.7:
+                win_p = (clash_p - 0.7) / 0.3
+                ax.text(WIDTH/2, HEIGHT * 0.1, "FOR SAGE! FOR EVERYONE!",
+                       fontsize=28, ha='center', color='#00FF7F',
+                       alpha=win_p, fontweight='bold', zorder=100)
+
+        # Phase 3: Eli WINS - massive explosion (70-100%)
+        else:
+            win_p = (p - 0.7) / 0.3
+
+            # Screen getting brighter
+            ax.set_facecolor(f'#{int(20 + win_p * 200):02x}{int(50 + win_p * 200):02x}{int(30 + win_p * 200):02x}')
+
+            # Eli victorious
+            eli = Frog(WIDTH * 0.4, HEIGHT * 0.35, 1.5 + win_p * 0.3)
+            eli.emotion = Emotion.POWERFUL
+            eli.has_crown = True
+            eli.set_glow(True, '#FFD700', 1.0)
+            eli.render(ax, local)
+
+            # Dark One disintegrating
+            if win_p < 0.6:
+                dark_one = TheDarkOne(WIDTH * 0.7 + win_p * 50, HEIGHT * 0.45, 2.0 - win_p * 1.5)
+                dark_one.alpha = 1 - win_p * 1.5
+                dark_one.render(ax, local)
+
+            # MASSIVE explosion rings
+            for i in range(15):
+                ring_r = win_p * 500 + i * 40
+                ax.add_patch(patches.Circle((WIDTH * 0.6, HEIGHT * 0.4), ring_r,
+                            fill=False, edgecolor='#FFD700', linewidth=5 - i * 0.3,
+                            alpha=max(0, 0.8 - win_p - i * 0.04), zorder=50))
+
+            # Victory particles everywhere
+            if local % 2 == 0:
+                ctx['particles'].emit_magic(np.random.uniform(100, WIDTH-100),
+                                           np.random.uniform(100, HEIGHT-100), 'gold', 2.0)
+
+            # "VICTORY" text
+            if win_p > 0.5:
+                text_scale = 1 + np.sin(local * 0.3) * 0.1
+                ax.text(WIDTH/2, HEIGHT/2, "VICTORY",
+                       fontsize=int(80 * text_scale), ha='center', va='center',
+                       color='#FFD700', alpha=(win_p - 0.5) * 2, fontweight='bold', zorder=200)
+
+            ctx['camera'].shake(30 * (1 - win_p), 0.9)
 
 
 class FlashbackScene(Scene):
@@ -4289,6 +4976,19 @@ class CoronationScene(Scene):
             ax.text(WIDTH * 0.5, HEIGHT * 0.65, "Long Live King Eli!",
                    fontsize=30, ha='center', style='italic',
                    color='#228B22', alpha=title_alpha, zorder=100)
+
+        # CINEMATIC EFFECTS - god rays from the sun for a heavenly coronation
+        ctx['lighting'].render_god_rays(ax, frame, WIDTH * 0.8, HEIGHT * 0.85,
+                                       color='#FFD700', intensity=0.35, num_rays=12)
+
+        # Lens flare when crown lands
+        if 0.35 < p < 0.5:
+            flare_intensity = 1 - abs(p - 0.4) / 0.05
+            ctx['lighting'].render_lens_flare(ax, frame, WIDTH * 0.5, HEIGHT * 0.55,
+                                             intensity=flare_intensity * 0.5)
+
+        # Subtle warm vignette for the joyous occasion
+        ctx['lighting'].render_vignette(ax, 0.2, color='#8B4513')
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
