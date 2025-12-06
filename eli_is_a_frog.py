@@ -4315,7 +4315,7 @@ class HuutersRestaurantEnvironment(Environment):
         for i in range(10):
             px = np.random.uniform(WIDTH * 0.15, WIDTH * 0.85)
             py = np.random.uniform(HEIGHT * 0.1, HEIGHT * 0.6)
-            sparkle_alpha = 0.3 + 0.4 * np.sin(frame * 0.05 + i)
+            sparkle_alpha = clamp(0.3 + 0.4 * np.sin(frame * 0.05 + i), 0, 1)
             ax.scatter([px], [py], c='#FFD700', s=5, alpha=sparkle_alpha, zorder=30)
 
 
@@ -5633,8 +5633,9 @@ class DangerousHorseRideScene(Scene):
         # Film grain for cinematic texture (like BattleScene)
         ctx['lighting'].render_film_grain(ax, frame, 0.02)
 
-        # Render particles
-        ctx['particles'].update_and_render(ax, frame)
+        # Update and render particles
+        ctx['particles'].update()
+        ctx['particles'].render(ax)
 
 
 class TransformScene(Scene):
@@ -7742,12 +7743,18 @@ def create_animation():
     camera = Camera(WIDTH, HEIGHT)
     lighting = LightingSystem()
     weather = WeatherSystem(particles)
+    slowmo = SlowMotionManager()
+    transitions = TransitionManager()
+    narration = NarrationSystem()
 
     ctx = {
         'particles': particles,
         'camera': camera,
         'lighting': lighting,
         'weather': weather,
+        'slowmo': slowmo,
+        'transitions': transitions,
+        'narration': narration,
     }
 
     def init():
