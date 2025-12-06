@@ -4137,7 +4137,9 @@ class StoryScene(Scene):
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 class HuutersDiscoveryScene(Scene):
-    """Eli discovers the mysterious Huuters restaurant emerging from the mist"""
+    """Eli discovers the mysterious Huuters restaurant emerging from the mist
+
+    CINEMATIC EFFECTS: Film grain, vignette, god rays, dust motes, bloom"""
 
     def __init__(self, start: int, duration: int):
         super().__init__(start, duration)
@@ -4152,7 +4154,7 @@ class HuutersDiscoveryScene(Scene):
             mist_p = p / 0.3
             ax.set_facecolor('#0a0510')
 
-            # Heavy mist
+            # Heavy mist - layered for depth
             for i in range(25):
                 mist_x = (local * 0.3 + i * 100) % (WIDTH + 200) - 100
                 mist_y = HEIGHT * (0.2 + (i % 5) * 0.15)
@@ -4163,10 +4165,24 @@ class HuutersDiscoveryScene(Scene):
                 )
                 ax.add_patch(mist)
 
+            # Additional fog layer for atmosphere
+            for i in range(10):
+                fog_x = (local * 0.15 + i * 200) % (WIDTH + 300) - 150
+                fog_y = HEIGHT * 0.15 + (i % 3) * 0.08 * HEIGHT
+                fog = patches.Ellipse(
+                    (fog_x, fog_y), 300, 80,
+                    color='#2a1a2a', alpha=0.25, zorder=3
+                )
+                ax.add_patch(fog)
+
             # Eli walking, looking lost
-            eli = Frog(WIDTH * (0.2 + mist_p * 0.15), HEIGHT * 0.2, 1.0)
+            eli_x = WIDTH * (0.2 + mist_p * 0.15)
+            eli = Frog(eli_x, HEIGHT * 0.2, 1.0)
             eli.emotion = Emotion.SAD
             eli.render(ax, local)
+
+            # Subtle dust motes in the mist
+            ctx['lighting'].render_dust_motes(ax, frame, 0.4)
 
             # "Lost in the mist..." text
             if mist_p > 0.3:
@@ -4174,6 +4190,9 @@ class HuutersDiscoveryScene(Scene):
                 ax.text(WIDTH/2, HEIGHT * 0.8, "Lost... alone...",
                        fontsize=28, ha='center', color='#9999aa',
                        alpha=text_alpha, style='italic', zorder=100)
+
+            # Heavy vignette for isolated feeling
+            ctx['lighting'].render_vignette(ax, 0.5 + mist_p * 0.2, color='#0a0510')
 
         # Phase 2: Lights appear in the mist (30-50%)
         elif p < 0.5:
@@ -4190,26 +4209,38 @@ class HuutersDiscoveryScene(Scene):
                 )
                 ax.add_patch(mist)
 
-            # Mysterious lights appearing
+            # Mysterious lights appearing with bloom effect
             for i in range(5):
                 light_x = WIDTH * (0.3 + i * 0.1)
                 light_y = HEIGHT * (0.4 + np.sin(i) * 0.1)
                 glow_alpha = reveal_p * 0.5 * (0.5 + 0.5 * np.sin(local * 0.05 + i))
-                light = patches.Circle(
-                    (light_x, light_y), 30 + reveal_p * 20,
-                    color='#FFD700', alpha=glow_alpha, zorder=10
-                )
-                ax.add_patch(light)
+
+                # Multiple layers for bloom effect
+                for j in range(3):
+                    light = patches.Circle(
+                        (light_x, light_y), (30 + reveal_p * 20) * (1 + j * 0.5),
+                        color='#FFD700', alpha=glow_alpha * (0.5 - j * 0.15), zorder=10 - j
+                    )
+                    ax.add_patch(light)
 
             # Eli looking up with hope
             eli = Frog(WIDTH * 0.35, HEIGHT * 0.2, 1.0)
             eli.emotion = Emotion.SHOCKED
             eli.render(ax, local)
 
+            # Emit gold particles toward lights
+            if local % 8 == 0:
+                ctx['particles'].emit_magic(
+                    WIDTH * 0.5, HEIGHT * 0.3, 'gold', 0.8)
+
             # "What is that...?" text
             ax.text(WIDTH/2, HEIGHT * 0.75, "What... is that light?",
                    fontsize=26, ha='center', color='#FFD700',
                    alpha=reveal_p, style='italic', zorder=100)
+
+            # Lightening vignette as hope appears
+            ctx['lighting'].render_vignette(ax, 0.5 - reveal_p * 0.2, color='#0a0510')
+            ctx['lighting'].render_dust_motes(ax, frame, 0.5)
 
         # Phase 3: Huuters fully revealed (50-100%)
         else:
@@ -4223,6 +4254,8 @@ class HuutersDiscoveryScene(Scene):
                 glow_alpha = (0.3 - full_p) / 0.3 * 0.4
                 ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT,
                             color='#FFD700', alpha=glow_alpha, zorder=100))
+                # Camera slight shake for impact of reveal
+                ctx['camera'].shake(8 * (0.3 - full_p) / 0.3, 0.92)
 
             # Eli approaching, amazed
             eli_x = WIDTH * (0.35 + full_p * 0.1)
@@ -4230,22 +4263,51 @@ class HuutersDiscoveryScene(Scene):
             eli.emotion = Emotion.SHOCKED if full_p < 0.5 else Emotion.HAPPY
             eli.render(ax, local)
 
-            # "HUUTERS" text emphasis
+            # "HUUTERS" text emphasis with glow
             if full_p > 0.3 and full_p < 0.7:
                 text_alpha = 1 - abs(full_p - 0.5) * 4
+                # Glow layers
+                for i in range(3):
+                    ax.text(WIDTH/2, HEIGHT * 0.5, "HUUTERS",
+                           fontsize=60 + i * 4, fontweight='bold', ha='center', va='center',
+                           color='#FF6B35', alpha=text_alpha * (0.15 - i * 0.04), zorder=149)
                 ax.text(WIDTH/2, HEIGHT * 0.5, "HUUTERS",
                        fontsize=60, fontweight='bold', ha='center', va='center',
-                       color='#FFD700', alpha=text_alpha * 0.3, zorder=150)
+                       color='#FFD700', alpha=text_alpha * 0.5, zorder=150)
 
-            # Sparkle particles
-            if local % 5 == 0:
+            # Sparkle particles - more frequent
+            if local % 4 == 0:
                 ctx['particles'].emit_magic(
                     np.random.uniform(WIDTH * 0.2, WIDTH * 0.8),
-                    np.random.uniform(HEIGHT * 0.4, HEIGHT * 0.8), 'gold', 0.5)
+                    np.random.uniform(HEIGHT * 0.4, HEIGHT * 0.8), 'gold', 0.7)
+
+            # God rays from the restaurant
+            if full_p > 0.4:
+                ray_intensity = (full_p - 0.4) / 0.6 * 0.3
+                ctx['lighting'].render_god_rays(ax, frame, WIDTH * 0.5, HEIGHT * 0.78,
+                                               color='#FFD700', intensity=ray_intensity, num_rays=5)
+
+            # Bloom effect on the sign
+            if full_p > 0.5:
+                bloom_intensity = (full_p - 0.5) / 0.5
+                ctx['lighting'].render_bloom(ax, frame, WIDTH * 0.5, HEIGHT * 0.78, 100,
+                                            color='#FF6B35', intensity=bloom_intensity * 0.3)
+
+            # Atmospheric dust
+            ctx['lighting'].render_dust_motes(ax, frame, 0.6 + full_p * 0.3)
+
+            # Warm vignette for inviting feeling
+            ctx['lighting'].render_vignette(ax, 0.25, color='#1a0a10')
+
+        # Film grain for cinematic quality throughout
+        ctx['lighting'].render_film_grain(ax, frame, 0.018)
 
 
 class HuutersMeetingScene(Scene):
-    """Eli meets Bella the waitress - love at first sight"""
+    """Eli meets Bella the waitress - love at first sight
+
+    CINEMATIC EFFECTS: Slow motion, lens flares, god rays, bloom, particles,
+    romantic vignette, film grain - matching the quality of WeddingScene"""
 
     def __init__(self, start: int, duration: int):
         super().__init__(start, duration)
@@ -4267,15 +4329,32 @@ class HuutersMeetingScene(Scene):
             eli.emotion = Emotion.NEUTRAL
             eli.render(ax, local)
 
-            # Looking around text
+            # Atmospheric dust motes
+            ctx['lighting'].render_dust_motes(ax, frame, 0.5)
+
+            # Looking around text with subtle fade
             if enter_p > 0.5:
+                text_alpha = (enter_p - 0.5) * 2
+                # Text glow
+                ax.text(WIDTH/2, HEIGHT * 0.7, "Welcome to Huuters...",
+                       fontsize=26, ha='center', color='#FF6B35',
+                       alpha=text_alpha * 0.3, style='italic', zorder=99)
                 ax.text(WIDTH/2, HEIGHT * 0.7, "Welcome to Huuters...",
                        fontsize=24, ha='center', color='#FFD700',
-                       alpha=(enter_p - 0.5) * 2, style='italic', zorder=100)
+                       alpha=text_alpha, style='italic', zorder=100)
+
+            # Warm vignette
+            ctx['lighting'].render_vignette(ax, 0.3, color='#1a0a10')
 
         # Phase 2: Bella appears - TIME SLOWS (25-50%)
         elif p < 0.5:
             meet_p = (p - 0.25) / 0.25
+
+            # SLOW MOTION EFFECT for dramatic entrance!
+            if meet_p < 0.3:
+                ctx['slowmo'].enter_slowmo(0.3, with_vignette=True)
+            elif meet_p > 0.7:
+                ctx['slowmo'].exit_slowmo()
 
             # Eli frozen in awe
             eli = Frog(WIDTH * 0.35, HEIGHT * 0.18, 1.0)
@@ -4287,30 +4366,59 @@ class HuutersMeetingScene(Scene):
             bella = Waitress(bella_x, HEIGHT * 0.2, 1.1)
             bella.emotion = Emotion.HAPPY
 
-            # Bella glow effect (she's radiant)
-            for i in range(4):
+            # Bella RADIANT glow effect - multiple layers for bloom
+            for i in range(6):
                 glow = patches.Circle(
-                    (bella_x, HEIGHT * 0.2), 80 + i * 30,
-                    color='#FFD700', alpha=0.1 - i * 0.02, zorder=30
+                    (bella_x, HEIGHT * 0.2), 60 + i * 25,
+                    color='#FFD700', alpha=0.12 - i * 0.018, zorder=30 - i
                 )
                 ax.add_patch(glow)
 
             bella.render(ax, local)
 
-            # Sparkles around Bella
-            for i in range(6):
-                sparkle_x = bella_x + np.sin(local * 0.1 + i) * 60
-                sparkle_y = HEIGHT * 0.2 + np.cos(local * 0.08 + i * 0.8) * 50 + i * 10
-                ax.scatter([sparkle_x], [sparkle_y], c='#FFD700',
-                          s=10 + np.sin(local * 0.2 + i) * 5, alpha=0.7, zorder=40)
+            # God rays behind Bella (she's angelic)
+            ctx['lighting'].render_god_rays(ax, frame, bella_x, HEIGHT * 0.5,
+                                           color='#FFD700', intensity=0.25 * meet_p, num_rays=5)
 
-            # Heart connection visualization
+            # Lens flare as she enters
+            if meet_p > 0.3 and meet_p < 0.8:
+                flare_intensity = 1 - abs(meet_p - 0.55) * 4
+                ctx['lighting'].render_lens_flare(ax, frame, bella_x, HEIGHT * 0.3,
+                                                 intensity=flare_intensity * 0.4)
+
+            # Magical sparkles around Bella
+            for i in range(8):
+                sparkle_x = bella_x + np.sin(local * 0.1 + i) * 70
+                sparkle_y = HEIGHT * 0.2 + np.cos(local * 0.08 + i * 0.8) * 60 + i * 8
+                sparkle_size = 15 + np.sin(local * 0.2 + i) * 8
+                ax.scatter([sparkle_x], [sparkle_y], c='#FFD700',
+                          s=sparkle_size, alpha=0.8, zorder=40)
+
+            # Emit magic particles around Bella
+            if local % 6 == 0:
+                ctx['particles'].emit_magic(bella_x + np.random.randn() * 40,
+                                           HEIGHT * 0.25 + np.random.randn() * 30, 'gold', 0.8)
+
+            # Heart connection visualization with glow
             if meet_p > 0.6:
                 heart_alpha = (meet_p - 0.6) / 0.4
                 heart_x = (WIDTH * 0.35 + bella_x) / 2
                 heart_y = HEIGHT * 0.4
+
+                # Heart glow
+                for i in range(3):
+                    ax.text(heart_x, heart_y, '♥', fontsize=45 + i * 5,
+                           color='#FF69B4', alpha=heart_alpha * (0.2 - i * 0.05),
+                           ha='center', zorder=49)
                 ax.text(heart_x, heart_y, '♥', fontsize=40,
                        color='#FF69B4', alpha=heart_alpha, ha='center', zorder=50)
+
+            # Bloom effect on Bella
+            ctx['lighting'].render_bloom(ax, frame, bella_x, HEIGHT * 0.2, 80,
+                                        color='#FFD700', intensity=meet_p * 0.3)
+
+            # Romantic pink vignette
+            ctx['lighting'].render_vignette(ax, 0.25, color='#2a0a15')
 
         # Phase 3: They talk, connection builds (50-80%)
         elif p < 0.8:
@@ -4325,7 +4433,16 @@ class HuutersMeetingScene(Scene):
             bella.emotion = Emotion.LOVE
             bella.render(ax, local)
 
-            # Conversation bubbles
+            # Warm glow between them
+            center_x = WIDTH * 0.5
+            for i in range(4):
+                glow = patches.Ellipse(
+                    (center_x, HEIGHT * 0.19), 180 + i * 35, 100 + i * 20,
+                    color='#FFD700', alpha=0.06 - i * 0.012, zorder=15
+                )
+                ax.add_patch(glow)
+
+            # Conversation bubbles with better styling
             conversations = [
                 (0.0, "I'm Bella...", WIDTH * 0.6),
                 (0.25, "I'm... Eli.", WIDTH * 0.4),
@@ -4336,25 +4453,40 @@ class HuutersMeetingScene(Scene):
                 if talk_p >= start_t and talk_p < start_t + 0.25:
                     bubble_alpha = 1 - abs(talk_p - start_t - 0.125) * 8
                     bubble_alpha = max(0, min(1, bubble_alpha))
+                    # Glow behind text
+                    ax.text(tx, HEIGHT * 0.4, text,
+                           fontsize=20, ha='center', color='#FFD700',
+                           alpha=bubble_alpha * 0.3, zorder=99)
                     ax.text(tx, HEIGHT * 0.4, text,
                            fontsize=18, ha='center', color='white',
                            alpha=bubble_alpha, zorder=100,
-                           bbox=dict(boxstyle='round', facecolor='#2a1a2a',
-                                   edgecolor='#FFD700', alpha=bubble_alpha * 0.8))
+                           bbox=dict(boxstyle='round,pad=0.5', facecolor='#2a1a2a',
+                                   edgecolor='#FFD700', linewidth=2, alpha=bubble_alpha * 0.85))
 
-            # Floating hearts
-            for i in range(4):
-                heart_y = HEIGHT * (0.35 + (local * 0.01 + i * 0.3) % 0.3)
-                heart_x = WIDTH * (0.45 + np.sin(local * 0.03 + i) * 0.08)
-                heart_alpha = 1 - ((local * 0.01 + i * 0.3) % 0.3) / 0.3
-                ax.text(heart_x, heart_y, '♥', fontsize=20,
-                       color='#FF69B4', alpha=heart_alpha * talk_p, ha='center', zorder=45)
+            # Floating hearts - more of them
+            for i in range(6):
+                heart_y = HEIGHT * (0.35 + (local * 0.01 + i * 0.25) % 0.35)
+                heart_x = WIDTH * (0.42 + np.sin(local * 0.03 + i) * 0.1)
+                heart_alpha = 1 - ((local * 0.01 + i * 0.25) % 0.35) / 0.35
+                ax.text(heart_x, heart_y, '♥', fontsize=18 + i % 3 * 5,
+                       color='#FF69B4', alpha=heart_alpha * talk_p * 0.8, ha='center', zorder=45)
+
+            # Magic particles between them
+            if local % 10 == 0:
+                ctx['particles'].emit_magic(center_x + np.random.randn() * 50,
+                                           HEIGHT * 0.25, 'pink', 0.6)
+
+            # Atmospheric dust
+            ctx['lighting'].render_dust_motes(ax, frame, 0.6)
+
+            # Soft vignette
+            ctx['lighting'].render_vignette(ax, 0.2, color='#1a0510')
 
         # Phase 4: Deep connection moment (80-100%)
         else:
             bond_p = (p - 0.8) / 0.2
 
-            # Closer together, warm lighting
+            # Closer together, intimate moment
             eli = Frog(WIDTH * 0.45, HEIGHT * 0.18, 1.0)
             eli.emotion = Emotion.LOVE
             eli.render(ax, local)
@@ -4363,41 +4495,77 @@ class HuutersMeetingScene(Scene):
             bella.emotion = Emotion.LOVE
             bella.render(ax, local)
 
-            # Warm glow between them
-            for i in range(5):
+            # Strong warm glow between them
+            center_x = WIDTH * 0.5
+            for i in range(6):
                 glow = patches.Ellipse(
-                    (WIDTH * 0.5, HEIGHT * 0.2), 150 + i * 30, 80 + i * 15,
-                    color='#FFD700', alpha=0.08 - i * 0.015, zorder=25
+                    (center_x, HEIGHT * 0.19), 140 + i * 30, 90 + i * 18,
+                    color='#FFD700', alpha=0.1 - i * 0.015, zorder=25
                 )
                 ax.add_patch(glow)
 
-            # Emotional text
+            # God rays from above (blessing their union)
+            ctx['lighting'].render_god_rays(ax, frame, center_x, HEIGHT * 0.8,
+                                           color='#FFD700', intensity=bond_p * 0.35, num_rays=4)
+
+            # Bloom on the couple
+            ctx['lighting'].render_bloom(ax, frame, center_x, HEIGHT * 0.2, 100,
+                                        color='#FFD700', intensity=bond_p * 0.4)
+
+            # Emotional text with dramatic presentation
             if bond_p > 0.3:
                 text_alpha = (bond_p - 0.3) / 0.7
+                # Text glow layers
+                for i in range(2):
+                    ax.text(WIDTH/2, HEIGHT * 0.75,
+                           "In that moment, everything changed...",
+                           fontsize=28 + i * 2, ha='center', color='#FF6B35',
+                           alpha=text_alpha * (0.2 - i * 0.08), style='italic', zorder=99)
                 ax.text(WIDTH/2, HEIGHT * 0.75,
                        "In that moment, everything changed...",
                        fontsize=26, ha='center', color='#FFD700',
                        alpha=text_alpha, style='italic', zorder=100)
 
-            # Many floating hearts
-            for i in range(8):
-                heart_y = HEIGHT * (0.3 + (local * 0.008 + i * 0.15) % 0.4)
-                heart_x = WIDTH * (0.35 + i * 0.04)
-                heart_alpha = 1 - ((local * 0.008 + i * 0.15) % 0.4) / 0.4
-                ax.text(heart_x, heart_y, '♥', fontsize=16 + i % 3 * 4,
-                       color='#FF69B4', alpha=heart_alpha * bond_p, ha='center', zorder=45)
+            # Many floating hearts cascade
+            for i in range(10):
+                heart_y = HEIGHT * (0.28 + (local * 0.006 + i * 0.12) % 0.45)
+                heart_x = WIDTH * (0.32 + i * 0.04 + np.sin(local * 0.04 + i) * 0.03)
+                heart_alpha = 1 - ((local * 0.006 + i * 0.12) % 0.45) / 0.45
+                heart_size = 14 + (i % 4) * 4
+                ax.text(heart_x, heart_y, '♥', fontsize=heart_size,
+                       color='#FF69B4', alpha=heart_alpha * bond_p * 0.9, ha='center', zorder=45)
+
+            # Lens flare for romantic atmosphere
+            ctx['lighting'].render_lens_flare(ax, frame, center_x, HEIGHT * 0.25,
+                                             intensity=bond_p * 0.35)
+
+            # Constant magic particles
+            if local % 5 == 0:
+                ctx['particles'].emit_magic(center_x + np.random.randn() * 60,
+                                           HEIGHT * 0.3 + np.random.randn() * 40, 'pink', 0.8)
+
+            # Romantic pink vignette
+            ctx['lighting'].render_vignette(ax, 0.2, color='#2a0515')
+
+        # Film grain for cinematic quality throughout
+        ctx['lighting'].render_film_grain(ax, frame, 0.015)
 
 
 class DangerousHorseRideScene(Scene):
     """THE CLIMACTIC DANGEROUS HORSE RIDE - INSANELY DRAMATIC AND STRESSFUL!
     Eli and Bella escape the Dark One's forces on a majestic horse through
-    treacherous terrain, dimensional rifts, and near-death experiences."""
+    treacherous terrain, dimensional rifts, and near-death experiences.
+
+    CINEMATIC EFFECTS: Film grain, chromatic aberration, bloom, slow motion,
+    god rays, lens flares, particles, dynamic vignette - matching BattleScene quality."""
 
     def __init__(self, start: int, duration: int):
         super().__init__(start, duration)
         self.horse = MajesticHorse(WIDTH * 0.5, HEIGHT * 0.35, 1.8)
         self.shake_intensity = 0
         self.danger_level = 0
+        self.slowmo_triggered = False
+        self.leap_slowmo_triggered = False
 
     def render(self, ax, frame: int, ctx: dict):
         p = self.progress(frame)
@@ -4453,10 +4621,27 @@ class DangerousHorseRideScene(Scene):
                        fontsize=36, fontweight='bold', ha='center',
                        color='#FF0000', alpha=(attack_p - 0.5) * 2, zorder=100)
 
-            # Lightning flash
+            # Lightning flash with chromatic aberration
             if local % 30 < 2:
                 ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT,
                             color='white', alpha=0.6, zorder=500))
+                ctx['lighting'].render_chromatic_aberration(ax, frame, 0.6)
+                ctx['camera'].shake(25, 0.85)
+
+            # Fire particles and dark energy from attackers
+            if local % 4 == 0:
+                ctx['particles'].emit_explosion(
+                    np.random.uniform(WIDTH * 0.3, WIDTH * 0.8),
+                    np.random.uniform(HEIGHT * 0.3, HEIGHT * 0.6), 1.5)
+            if local % 6 == 0:
+                ctx['particles'].emit_dark_energy(WIDTH * 0.8, HEIGHT * 0.3, 1.0)
+
+            # God rays from fire (ominous orange)
+            ctx['lighting'].render_god_rays(ax, frame, WIDTH * 0.5, HEIGHT * 0.5,
+                                           color='#FF4500', intensity=attack_p * 0.3, num_rays=5)
+
+            # Heavy danger vignette
+            ctx['lighting'].render_vignette(ax, 0.6 + attack_p * 0.2, color='#1a0000')
 
         # Phase 2: The horse appears! They mount and RIDE! (15-25%)
         elif p < 0.25:
@@ -4495,6 +4680,21 @@ class DangerousHorseRideScene(Scene):
             ax.text(WIDTH/2, HEIGHT * 0.85, "HOLD ON TIGHT!",
                    fontsize=32, fontweight='bold', ha='center',
                    color='#FFD700', alpha=mount_p, zorder=100)
+
+            # Dramatic horse entrance with particles
+            if local % 3 == 0:
+                ctx['particles'].emit_magic(horse_x, HEIGHT * 0.35, 'gold', 0.8)
+
+            # Lens flare as horse appears heroically
+            ctx['lighting'].render_lens_flare(ax, frame, horse_x, HEIGHT * 0.5,
+                                             intensity=mount_p * 0.4)
+
+            # Bloom around the majestic horse
+            ctx['lighting'].render_bloom(ax, frame, horse_x, HEIGHT * 0.4, 120,
+                                        color='#8B4513', intensity=mount_p * 0.3)
+
+            # Stormy vignette
+            ctx['lighting'].render_vignette(ax, 0.5, color='#0a0812')
 
         # Phase 3: THE RIDE BEGINS - Galloping through darkness (25-45%)
         elif p < 0.45:
@@ -4549,7 +4749,7 @@ class DangerousHorseRideScene(Scene):
                 ax.scatter([px - 8, px + 8], [py + 5, py + 5],
                           c='#FF0000', s=15, zorder=9)
 
-            # Hoofbeat sound visualization
+            # Hoofbeat sound visualization with dust particles
             if local % 8 < 2:
                 for i in range(3):
                     hoof = patches.Circle(
@@ -4557,6 +4757,23 @@ class DangerousHorseRideScene(Scene):
                         color='#8B4513', alpha=0.4 - i * 0.1, zorder=4
                     )
                     ax.add_patch(hoof)
+                # Emit dust particles on hoofbeat
+                ctx['particles'].emit_magic(WIDTH * 0.35, HEIGHT * 0.15, 'brown', 0.5)
+
+            # Dark energy from pursuers
+            if local % 10 == 0:
+                ctx['particles'].emit_dark_energy(WIDTH * 0.85, HEIGHT * 0.3, 0.8)
+
+            # Speed-induced chromatic aberration (mild)
+            ctx['lighting'].render_chromatic_aberration(ax, frame, 0.15 + ride_p * 0.1)
+
+            # Danger vignette that pulses with speed
+            pulse = 0.5 + 0.1 * np.sin(local * 0.2)
+            ctx['lighting'].render_vignette(ax, 0.4 + ride_p * 0.2 * pulse, color='#050308')
+
+            # God rays from pursuers' eyes (ominous red)
+            ctx['lighting'].render_god_rays(ax, frame, WIDTH * 0.85, HEIGHT * 0.3,
+                                           color='#FF0000', intensity=0.15, num_rays=3)
 
         # Phase 4: DIMENSIONAL RIFT - Reality tears apart! (45-60%)
         elif p < 0.6:
@@ -4618,10 +4835,32 @@ class DangerousHorseRideScene(Scene):
                    fontsize=30, fontweight='bold', ha='center',
                    color='#9400D3', alpha=0.8, zorder=100)
 
-            # Intense screen flash
+            # Intense screen flash with heavy chromatic aberration
             if local % 20 < 2:
                 ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT,
                             color='#9400D3', alpha=0.4, zorder=500))
+                ctx['lighting'].render_chromatic_aberration(ax, frame, 0.8)
+                ctx['camera'].shake(20, 0.85)
+
+            # Constant dimensional particle emission
+            if local % 3 == 0:
+                ctx['particles'].emit_magic(
+                    np.random.uniform(WIDTH * 0.2, WIDTH * 0.8),
+                    np.random.uniform(HEIGHT * 0.3, HEIGHT * 0.7), 'purple', 1.2)
+
+            # Bloom around rifts
+            for i in range(3):
+                tear_x = WIDTH * (0.25 + i * 0.25)
+                tear_y = HEIGHT * 0.45
+                ctx['lighting'].render_bloom(ax, frame, tear_x, tear_y, 60,
+                                            color='#9400D3', intensity=0.3 * rift_p)
+
+            # God rays from the rifts (otherworldly purple)
+            ctx['lighting'].render_god_rays(ax, frame, WIDTH * 0.5, HEIGHT * 0.5,
+                                           color='#9400D3', intensity=rift_p * 0.4, num_rays=8)
+
+            # Intense danger vignette
+            ctx['lighting'].render_vignette(ax, 0.6 + rift_p * 0.2, color='#0a0020')
 
         # Phase 5: COLLAPSING BRIDGE - Near death! (60-75%)
         elif p < 0.75:
@@ -4703,9 +4942,43 @@ class DangerousHorseRideScene(Scene):
                        fontsize=50, fontweight='bold', ha='center',
                        color='#FF0000', alpha=0.6, zorder=100)
 
+            # Lava glow bloom
+            ctx['lighting'].render_bloom(ax, frame, WIDTH * 0.5, HEIGHT * 0.08, 200,
+                                        color='#FF4500', intensity=0.5)
+
+            # Explosion particles from falling rocks
+            if local % 12 == 0:
+                ctx['particles'].emit_explosion(
+                    WIDTH * 0.3 + np.random.rand() * WIDTH * 0.4,
+                    HEIGHT * 0.15, 1.2)
+
+            # God rays from lava below (hellish orange)
+            ctx['lighting'].render_god_rays(ax, frame, WIDTH * 0.5, HEIGHT * 0.05,
+                                           color='#FF4500', intensity=0.3, num_rays=6)
+
+            # Chromatic aberration on every jump impact
+            if local % 60 > 55:
+                ctx['lighting'].render_chromatic_aberration(ax, frame, 0.5)
+
+            # Hellish red vignette
+            ctx['lighting'].render_vignette(ax, 0.6 + bridge_p * 0.15, color='#1a0505')
+
+            # Lens flare from lava
+            ctx['lighting'].render_lens_flare(ax, frame, WIDTH * 0.5, HEIGHT * 0.1,
+                                             intensity=0.25)
+
         # Phase 6: FINAL LEAP - Escape to safety (75-90%)
+        # THIS IS THE CLIMACTIC SLOW-MOTION MOMENT!
         elif p < 0.9:
             leap_p = (p - 0.75) / 0.15
+
+            # SLOW MOTION during the epic leap! (apex of jump)
+            if leap_p > 0.3 and leap_p < 0.7 and not self.leap_slowmo_triggered:
+                ctx['slowmo'].enter_slowmo(0.25, with_vignette=True)
+                self.leap_slowmo_triggered = True
+            elif leap_p > 0.7 and self.leap_slowmo_triggered:
+                ctx['slowmo'].exit_slowmo()
+                self.leap_slowmo_triggered = False
 
             # Transitioning to safer ground
             safe_color = lerp_color('#1a0505', '#0a1a0a', leap_p)
@@ -4745,10 +5018,34 @@ class DangerousHorseRideScene(Scene):
             bella.emotion = Emotion.DETERMINED
             bella.render(ax, local)
 
-            # Triumphant moment
+            # God rays during the leap (hope shining through)
+            if leap_p > 0.2:
+                ctx['lighting'].render_god_rays(ax, frame, WIDTH * 0.7, HEIGHT * 0.7,
+                                               color='#FFD700', intensity=(leap_p - 0.2) * 0.4, num_rays=5)
+
+            # Bloom around the leaping horse (heroic glow)
+            ctx['lighting'].render_bloom(ax, frame, horse_x, HEIGHT * 0.35 + leap_height, 100,
+                                        color='#FFD700', intensity=leap_arc * 0.5)
+
+            # Lens flare at apex of jump
+            if 0.4 < leap_p < 0.6:
+                flare_intensity = 1 - abs(leap_p - 0.5) / 0.1
+                ctx['lighting'].render_lens_flare(ax, frame, horse_x, HEIGHT * 0.5 + leap_height,
+                                                 intensity=flare_intensity * 0.5)
+
+            # Render slow-mo effects
+            ctx['slowmo'].render_effects(ax)
+
+            # Magic particles trail behind the horse during leap
+            if local % 2 == 0:
+                ctx['particles'].emit_magic(horse_x - 40, HEIGHT * 0.3 + leap_height, 'gold', 0.8)
+
+            # Triumphant moment - landing
             if leap_p > 0.7:
-                # Landing impact
+                # Landing impact with chromatic aberration
                 ctx['camera'].shake(30, 0.8)
+                ctx['lighting'].render_chromatic_aberration(ax, frame, 0.4)
+
                 # Dust cloud
                 for i in range(10):
                     dust_x = horse_x + np.random.randn() * 50
@@ -4757,6 +5054,12 @@ class DangerousHorseRideScene(Scene):
                                          color='#8B7355', alpha=0.3 - i * 0.025, zorder=20)
                     ax.add_patch(dust)
 
+                # Explosion of hope particles on landing
+                if leap_p > 0.75 and leap_p < 0.78:
+                    for _ in range(5):
+                        ctx['particles'].emit_magic(horse_x + np.random.randn() * 40,
+                                                   HEIGHT * 0.3, 'gold', 1.5)
+
             # Stars/hope appearing
             for i in range(15):
                 star_x = WIDTH * (0.65 + np.random.rand() * 0.3)
@@ -4764,6 +5067,10 @@ class DangerousHorseRideScene(Scene):
                 twinkle = 0.5 + 0.5 * np.sin(local * 0.1 + i)
                 ax.scatter([star_x], [star_y], c='#FFD700',
                           s=10 * twinkle * leap_p, alpha=twinkle * leap_p, zorder=25)
+
+            # Transition vignette (from danger to safety)
+            vignette_color = lerp_color('#1a0000', '#0a1a0a', leap_p)
+            ctx['lighting'].render_vignette(ax, 0.4 - leap_p * 0.2, color=vignette_color)
 
         # Phase 7: Safe at last - tender moment (90-100%)
         else:
@@ -4837,9 +5144,32 @@ class DangerousHorseRideScene(Scene):
                 ax.text(heart_x, heart_y, '♥', fontsize=20,
                        color='#FF69B4', alpha=safe_p * (1 - i * 0.15), ha='center', zorder=30)
 
-        # Universal effects throughout the ride
-        # Vignette for focus
-        ctx['lighting'].render_vignette(ax, 0.5 + self.danger_level * 0.3)
+            # Romantic god rays from sunrise
+            ctx['lighting'].render_god_rays(ax, frame, WIDTH * 0.8, HEIGHT * 0.7,
+                                           color='#FFD700', intensity=safe_p * 0.35, num_rays=4)
+
+            # Bloom around the couple
+            ctx['lighting'].render_bloom(ax, frame, WIDTH * 0.54, HEIGHT * 0.21, 80,
+                                        color='#FFD700', intensity=safe_p * 0.4)
+
+            # Lens flare from sunrise
+            ctx['lighting'].render_lens_flare(ax, frame, WIDTH * 0.8, HEIGHT * 0.7,
+                                             intensity=safe_p * 0.3)
+
+            # Romantic magic particles
+            if local % 4 == 0 and safe_p > 0.3:
+                ctx['particles'].emit_magic(WIDTH * 0.54 + np.random.randn() * 40,
+                                           HEIGHT * 0.25, 'pink', 0.6)
+
+            # Soft romantic vignette
+            ctx['lighting'].render_vignette(ax, 0.2, color='#1a1a2a')
+
+        # UNIVERSAL EFFECTS throughout the entire ride
+        # Film grain for cinematic texture (like BattleScene)
+        ctx['lighting'].render_film_grain(ax, frame, 0.02)
+
+        # Render particles
+        ctx['particles'].update_and_render(ax, frame)
 
 
 def lerp_color(c1: str, c2: str, t: float) -> str:
