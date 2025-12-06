@@ -104,7 +104,7 @@ import colorsys
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 FPS = 60  # Silky smooth 60fps
-DURATION = 900  # 15 minutes - epic runtime (5x longer than original)
+DURATION = 1500  # 25 minutes - TRULY EPIC runtime
 TOTAL_FRAMES = FPS * DURATION
 WIDTH, HEIGHT = 1920, 1080  # Full HD cinematic
 
@@ -2523,6 +2523,478 @@ class BattleArenaEnvironment(Environment):
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
+# ║                        CINEMATIC TRANSITIONS                                  ║
+# ╚═══════════════════════════════════════════════════════════════════════════════╝
+
+class TransitionType(Enum):
+    """Types of cinematic transitions"""
+    FADE = auto()
+    IRIS_IN = auto()
+    IRIS_OUT = auto()
+    DISSOLVE = auto()
+    WIPE_LEFT = auto()
+    WIPE_RIGHT = auto()
+    RIPPLE_DISSOLVE = auto()
+    FLASH = auto()
+
+
+class TransitionManager:
+    """Manages cinematic transitions between scenes"""
+
+    def __init__(self):
+        self.active = False
+        self.transition_type = TransitionType.FADE
+        self.progress = 0
+        self.duration = 60
+        self.center_x = WIDTH / 2
+        self.center_y = HEIGHT / 2
+
+    def start(self, transition_type: TransitionType, duration: int = 60,
+              center_x: float = None, center_y: float = None):
+        """Start a transition"""
+        self.active = True
+        self.transition_type = transition_type
+        self.progress = 0
+        self.duration = duration
+        self.center_x = center_x if center_x else WIDTH / 2
+        self.center_y = center_y if center_y else HEIGHT / 2
+
+    def update(self):
+        """Update transition progress"""
+        if self.active:
+            self.progress += 1 / self.duration
+            if self.progress >= 1:
+                self.active = False
+                self.progress = 0
+
+    def render(self, ax, going_out: bool = True):
+        """Render the transition effect"""
+        if not self.active:
+            return
+
+        t = Easing.smooth_step(self.progress)
+        if not going_out:
+            t = 1 - t
+
+        if self.transition_type == TransitionType.FADE:
+            fade = patches.Rectangle((0, 0), WIDTH, HEIGHT,
+                                     color='black', alpha=t, zorder=1000)
+            ax.add_patch(fade)
+
+        elif self.transition_type == TransitionType.IRIS_OUT:
+            # Circular iris closing
+            radius = (1 - t) * np.sqrt(WIDTH**2 + HEIGHT**2) / 2
+            # Draw black corners
+            for angle in range(360):
+                theta = np.radians(angle)
+                if radius > 10:
+                    # Create a black ring outside the iris
+                    outer = patches.Wedge((self.center_x, self.center_y),
+                                          WIDTH * 2, angle, angle + 2,
+                                          width=WIDTH * 2 - radius,
+                                          color='black', zorder=1000)
+                    ax.add_patch(outer)
+
+        elif self.transition_type == TransitionType.IRIS_IN:
+            # Circular iris opening
+            radius = t * np.sqrt(WIDTH**2 + HEIGHT**2) / 2
+            for angle in range(0, 360, 5):
+                outer = patches.Wedge((self.center_x, self.center_y),
+                                      WIDTH * 2, angle, angle + 6,
+                                      width=max(0, WIDTH * 2 - radius),
+                                      color='black', zorder=1000)
+                ax.add_patch(outer)
+
+        elif self.transition_type == TransitionType.WIPE_LEFT:
+            wipe = patches.Rectangle((WIDTH * (1 - t), 0), WIDTH * t, HEIGHT,
+                                     color='black', zorder=1000)
+            ax.add_patch(wipe)
+
+        elif self.transition_type == TransitionType.WIPE_RIGHT:
+            wipe = patches.Rectangle((0, 0), WIDTH * t, HEIGHT,
+                                     color='black', zorder=1000)
+            ax.add_patch(wipe)
+
+        elif self.transition_type == TransitionType.FLASH:
+            flash = patches.Rectangle((0, 0), WIDTH, HEIGHT,
+                                      color='white', alpha=1 - t, zorder=1000)
+            ax.add_patch(flash)
+
+        elif self.transition_type == TransitionType.RIPPLE_DISSOLVE:
+            # Dreamy ripple effect for flashbacks
+            for i in range(20):
+                ring_t = (t + i * 0.05) % 1
+                ring_radius = ring_t * np.sqrt(WIDTH**2 + HEIGHT**2)
+                ring = patches.Circle((self.center_x, self.center_y), ring_radius,
+                                      fill=False, edgecolor='white',
+                                      linewidth=5, alpha=(1 - ring_t) * 0.5, zorder=999)
+                ax.add_patch(ring)
+            fade = patches.Rectangle((0, 0), WIDTH, HEIGHT,
+                                     color='white', alpha=t * 0.7, zorder=998)
+            ax.add_patch(fade)
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════════╗
+# ║                         NARRATION SYSTEM                                      ║
+# ╚═══════════════════════════════════════════════════════════════════════════════╝
+
+class NarrationSystem:
+    """Cinematic narration with typewriter effect"""
+
+    def __init__(self):
+        self.text = ""
+        self.displayed_text = ""
+        self.char_timer = 0
+        self.char_delay = 3  # frames per character
+        self.active = False
+        self.fade_timer = 0
+        self.position = 'bottom'  # 'bottom', 'top', 'center'
+        self.style = 'dramatic'  # 'dramatic', 'whisper', 'thought'
+
+    def show(self, text: str, position: str = 'bottom', style: str = 'dramatic', delay: int = 3):
+        """Start showing narration"""
+        self.text = text
+        self.displayed_text = ""
+        self.char_timer = 0
+        self.char_delay = delay
+        self.active = True
+        self.fade_timer = 0
+        self.position = position
+        self.style = style
+
+    def hide(self):
+        """Start fading out"""
+        self.fade_timer = 60
+
+    def update(self):
+        """Update narration state"""
+        if self.active:
+            self.char_timer += 1
+            if self.char_timer >= self.char_delay:
+                self.char_timer = 0
+                if len(self.displayed_text) < len(self.text):
+                    self.displayed_text = self.text[:len(self.displayed_text) + 1]
+
+        if self.fade_timer > 0:
+            self.fade_timer -= 1
+            if self.fade_timer == 0:
+                self.active = False
+
+    def render(self, ax):
+        """Render the narration"""
+        if not self.active and self.fade_timer == 0:
+            return
+
+        alpha = 1.0
+        if self.fade_timer > 0:
+            alpha = self.fade_timer / 60
+
+        # Position
+        if self.position == 'bottom':
+            y = HEIGHT * 0.12
+        elif self.position == 'top':
+            y = HEIGHT * 0.88
+        else:
+            y = HEIGHT * 0.5
+
+        # Style settings
+        if self.style == 'dramatic':
+            fontsize = 28
+            color = '#FFFFFF'
+            bg_alpha = 0.5
+        elif self.style == 'whisper':
+            fontsize = 22
+            color = '#AAAAAA'
+            bg_alpha = 0.3
+        else:  # thought
+            fontsize = 24
+            color = '#ADD8E6'
+            bg_alpha = 0.4
+
+        # Background bar
+        bg = patches.Rectangle((0, y - 40), WIDTH, 80,
+                               color='black', alpha=bg_alpha * alpha, zorder=800)
+        ax.add_patch(bg)
+
+        # Text with subtle glow
+        ax.text(WIDTH/2, y + 3, self.displayed_text,
+               fontsize=fontsize, ha='center', va='center',
+               color='black', alpha=alpha * 0.3, zorder=801)
+        ax.text(WIDTH/2, y, self.displayed_text,
+               fontsize=fontsize, ha='center', va='center',
+               color=color, alpha=alpha, zorder=802,
+               fontfamily='serif', style='italic' if self.style == 'thought' else 'normal')
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════════╗
+# ║                         SLOW MOTION SYSTEM                                    ║
+# ╚═══════════════════════════════════════════════════════════════════════════════╝
+
+class SlowMotionManager:
+    """Manages dramatic slow-motion sequences"""
+
+    def __init__(self):
+        self.active = False
+        self.time_scale = 1.0
+        self.target_scale = 1.0
+        self.vignette_intensity = 0
+        self.desaturation = 0
+        self.blur_lines = []
+
+    def enter_slowmo(self, scale: float = 0.3, with_vignette: bool = True):
+        """Enter slow motion"""
+        self.active = True
+        self.target_scale = scale
+        if with_vignette:
+            self.vignette_intensity = 0.6
+
+    def exit_slowmo(self):
+        """Exit slow motion"""
+        self.target_scale = 1.0
+        self.vignette_intensity = 0
+
+    def update(self):
+        """Update slow motion state"""
+        self.time_scale = lerp(self.time_scale, self.target_scale, 0.1)
+        if abs(self.time_scale - 1.0) < 0.05:
+            self.active = False
+
+    def get_frame_delta(self) -> float:
+        """Get the time delta for this frame"""
+        return self.time_scale
+
+    def render_effects(self, ax):
+        """Render slow-motion visual effects"""
+        if self.vignette_intensity > 0.01:
+            # Dark vignette around edges
+            for i in range(10):
+                t = i / 10
+                alpha = self.vignette_intensity * t * 0.15
+                edge = patches.Rectangle((-50, -50), WIDTH + 100, HEIGHT + 100,
+                                         fill=False, edgecolor='black',
+                                         linewidth=50 * (1 - t),
+                                         alpha=alpha, zorder=900)
+                ax.add_patch(edge)
+
+            # Radial gradient vignette
+            for ring in range(5):
+                radius = WIDTH * (0.8 - ring * 0.15)
+                vignette = patches.Circle((WIDTH/2, HEIGHT/2), radius,
+                                         fill=False, edgecolor='black',
+                                         linewidth=100, alpha=self.vignette_intensity * 0.1,
+                                         zorder=899)
+                ax.add_patch(vignette)
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════════╗
+# ║                      ADDITIONAL ENVIRONMENTS                                  ║
+# ╚═══════════════════════════════════════════════════════════════════════════════╝
+
+class VillageEnvironment(Environment):
+    """Peaceful frog village"""
+
+    def __init__(self):
+        super().__init__()
+        self.houses = [
+            {'x': WIDTH * 0.15, 'y': HEIGHT * 0.35, 'size': 1.0},
+            {'x': WIDTH * 0.4, 'y': HEIGHT * 0.38, 'size': 1.2},
+            {'x': WIDTH * 0.65, 'y': HEIGHT * 0.33, 'size': 0.9},
+            {'x': WIDTH * 0.85, 'y': HEIGHT * 0.36, 'size': 1.1},
+        ]
+
+    def render_background(self, ax, frame: int, lighting: LightingSystem):
+        sky_color = lighting.get_sky_color()
+        ax.set_facecolor(sky_color)
+        lighting.render_celestial(ax, frame)
+
+        # Rolling hills
+        for i, (hx, hy, scale) in enumerate([(0, 0.5, 1), (WIDTH*0.3, 0.48, 1.2), (WIDTH*0.6, 0.52, 0.9)]):
+            hill_color = lighting.apply_ambient_to_color('#3CB371')
+            hill = patches.Ellipse((hx + 400, HEIGHT * hy), 800 * scale, 200 * scale,
+                                  color=hill_color, zorder=2 + i)
+            ax.add_patch(hill)
+
+        # Grass ground
+        grass = patches.Rectangle((0, 0), WIDTH, HEIGHT * 0.35,
+                                  color=lighting.apply_ambient_to_color('#228B22'), zorder=5)
+        ax.add_patch(grass)
+
+        # Village houses (mushroom-style homes)
+        for house in self.houses:
+            self._draw_mushroom_house(ax, house['x'], house['y'], house['size'], frame, lighting)
+
+        # Path
+        path_points = [(0, HEIGHT * 0.15), (WIDTH * 0.3, HEIGHT * 0.18),
+                       (WIDTH * 0.6, HEIGHT * 0.14), (WIDTH, HEIGHT * 0.16)]
+        path_x = [p[0] for p in path_points]
+        path_y = [p[1] for p in path_points]
+        ax.fill_between(path_x, [y - 15 for y in path_y], [y + 15 for y in path_y],
+                       color='#D2B48C', zorder=6)
+
+    def _draw_mushroom_house(self, ax, x, y, scale, frame, lighting):
+        """Draw a cute mushroom-style frog house"""
+        s = 60 * scale
+
+        # Stem (door area)
+        stem = patches.Rectangle((x - s * 0.4, y - s * 0.8), s * 0.8, s * 0.8,
+                                 color=lighting.apply_ambient_to_color('#F5DEB3'), zorder=10)
+        ax.add_patch(stem)
+
+        # Door
+        door = patches.Rectangle((x - s * 0.15, y - s * 0.7), s * 0.3, s * 0.5,
+                                 color='#8B4513', zorder=11)
+        ax.add_patch(door)
+
+        # Cap (roof)
+        cap = patches.Ellipse((x, y), s * 1.4, s * 0.8,
+                             color=lighting.apply_ambient_to_color('#FF6347'), zorder=12)
+        ax.add_patch(cap)
+
+        # Spots on cap
+        for i in range(4):
+            spot_x = x + np.cos(i * 1.5) * s * 0.4
+            spot_y = y + np.sin(i * 1.5) * s * 0.2 + s * 0.1
+            spot = patches.Circle((spot_x, spot_y), s * 0.12,
+                                  color='white', zorder=13)
+            ax.add_patch(spot)
+
+        # Window with warm light
+        window = patches.Circle((x + s * 0.2, y - s * 0.3), s * 0.12,
+                               color='#FFD700', alpha=0.8, zorder=11)
+        ax.add_patch(window)
+
+
+class MountainEnvironment(Environment):
+    """Epic mountain peak"""
+
+    def __init__(self):
+        super().__init__()
+
+    def render_background(self, ax, frame: int, lighting: LightingSystem):
+        ax.set_facecolor('#1a1a2e')
+
+        # Starfield for height
+        np.random.seed(123)
+        for _ in range(80):
+            sx = np.random.uniform(0, WIDTH)
+            sy = np.random.uniform(HEIGHT * 0.5, HEIGHT)
+            twinkle = 0.5 + 0.5 * np.sin(frame * 0.05 + sx)
+            ax.scatter([sx], [sy], c='white', s=twinkle * 15, alpha=twinkle * 0.7, zorder=1)
+
+        # Distant mountains
+        for i, (mx, mh, color) in enumerate([
+            (WIDTH * 0.2, HEIGHT * 0.7, '#2d3436'),
+            (WIDTH * 0.5, HEIGHT * 0.75, '#2d3436'),
+            (WIDTH * 0.8, HEIGHT * 0.65, '#2d3436'),
+        ]):
+            mountain = patches.Polygon([
+                [mx - 300, HEIGHT * 0.3],
+                [mx, mh],
+                [mx + 300, HEIGHT * 0.3],
+            ], color=color, zorder=2 + i)
+            ax.add_patch(mountain)
+            # Snow cap
+            snow = patches.Polygon([
+                [mx - 50, mh - 50],
+                [mx, mh],
+                [mx + 50, mh - 50],
+            ], color='white', zorder=3 + i)
+            ax.add_patch(snow)
+
+        # Main peak where hero stands
+        peak = patches.Polygon([
+            [WIDTH * 0.3, HEIGHT * 0.2],
+            [WIDTH * 0.5, HEIGHT * 0.55],
+            [WIDTH * 0.7, HEIGHT * 0.2],
+        ], color='#4a4a5c', zorder=5)
+        ax.add_patch(peak)
+
+        # Snow on main peak
+        snow_peak = patches.Polygon([
+            [WIDTH * 0.4, HEIGHT * 0.4],
+            [WIDTH * 0.5, HEIGHT * 0.55],
+            [WIDTH * 0.6, HEIGHT * 0.4],
+        ], color='#FFFAFA', zorder=6)
+        ax.add_patch(snow_peak)
+
+        # Clouds below
+        for i in range(8):
+            cx = (frame * 0.3 + i * 250) % (WIDTH + 400) - 200
+            cy = HEIGHT * 0.2 + np.sin(i) * 30
+            cloud = patches.Ellipse((cx, cy), 200, 50,
+                                   color='white', alpha=0.4, zorder=4)
+            ax.add_patch(cloud)
+
+
+class CastleEnvironment(Environment):
+    """Dark fortress castle"""
+
+    def __init__(self):
+        super().__init__()
+
+    def render_background(self, ax, frame: int, lighting: LightingSystem):
+        ax.set_facecolor('#0d0d15')
+
+        # Ominous red sky
+        sky_gradient = patches.Rectangle((0, HEIGHT * 0.4), WIDTH, HEIGHT * 0.6,
+                                         color='#1a0a0a', zorder=1)
+        ax.add_patch(sky_gradient)
+
+        # Lightning flashes
+        if frame % 180 < 5:
+            flash = patches.Rectangle((0, 0), WIDTH, HEIGHT,
+                                      color='white', alpha=0.3, zorder=500)
+            ax.add_patch(flash)
+
+        # Castle silhouette
+        castle_parts = [
+            # Main wall
+            patches.Rectangle((WIDTH * 0.2, HEIGHT * 0.3), WIDTH * 0.6, HEIGHT * 0.2,
+                             color='#1a1a1a', zorder=5),
+            # Left tower
+            patches.Rectangle((WIDTH * 0.15, HEIGHT * 0.3), WIDTH * 0.1, HEIGHT * 0.35,
+                             color='#1a1a1a', zorder=6),
+            # Right tower
+            patches.Rectangle((WIDTH * 0.75, HEIGHT * 0.3), WIDTH * 0.1, HEIGHT * 0.35,
+                             color='#1a1a1a', zorder=6),
+            # Center tower (tallest)
+            patches.Rectangle((WIDTH * 0.4, HEIGHT * 0.3), WIDTH * 0.2, HEIGHT * 0.5,
+                             color='#1a1a1a', zorder=7),
+        ]
+        for part in castle_parts:
+            ax.add_patch(part)
+
+        # Tower tops (pointed)
+        tower_tops = [
+            (WIDTH * 0.2, HEIGHT * 0.65, 60),
+            (WIDTH * 0.8, HEIGHT * 0.65, 60),
+            (WIDTH * 0.5, HEIGHT * 0.8, 80),
+        ]
+        for tx, ty, size in tower_tops:
+            top = patches.Polygon([
+                [tx - size/2, ty],
+                [tx, ty + size],
+                [tx + size/2, ty],
+            ], color='#1a1a1a', zorder=8)
+            ax.add_patch(top)
+
+        # Glowing windows (evil)
+        windows = [(WIDTH * 0.5, HEIGHT * 0.6), (WIDTH * 0.2, HEIGHT * 0.5),
+                   (WIDTH * 0.8, HEIGHT * 0.5), (WIDTH * 0.45, HEIGHT * 0.45),
+                   (WIDTH * 0.55, HEIGHT * 0.45)]
+        for wx, wy in windows:
+            glow_intensity = 0.5 + 0.3 * np.sin(frame * 0.08 + wx)
+            window = patches.Circle((wx, wy), 15,
+                                   color='#FF4500', alpha=glow_intensity, zorder=10)
+            ax.add_patch(window)
+
+        # Ground
+        ground = patches.Rectangle((0, 0), WIDTH, HEIGHT * 0.3,
+                                   color='#0a0a0a', zorder=3)
+        ax.add_patch(ground)
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════════╗
 # ║                              SCENE SYSTEM                                     ║
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
 
@@ -2606,7 +3078,16 @@ class StoryScene(Scene):
     """General story scene with environment and characters"""
     def __init__(self, start: int, duration: int, env_type: str = 'pond', time: str = 'day'):
         super().__init__(start, duration)
-        self.env = PondEnvironment() if env_type == 'pond' else DarkForestEnvironment() if env_type == 'forest' else BattleArenaEnvironment()
+        # Select environment based on type
+        env_map = {
+            'pond': PondEnvironment,
+            'forest': DarkForestEnvironment,
+            'battle': BattleArenaEnvironment,
+            'village': VillageEnvironment,
+            'mountain': MountainEnvironment,
+            'castle': CastleEnvironment,
+        }
+        self.env = env_map.get(env_type, PondEnvironment)()
         self.time = time
         self.chars = []
         self.events = []
@@ -2620,8 +3101,12 @@ class StoryScene(Scene):
 
         # Set time of day
         times = {'dawn': TimeOfDay.DAWN, 'day': TimeOfDay.NOON, 'sunset': TimeOfDay.SUNSET,
-                'night': TimeOfDay.NIGHT, 'dark': TimeOfDay.MIDNIGHT}
+                'night': TimeOfDay.NIGHT, 'dark': TimeOfDay.MIDNIGHT, 'storm': TimeOfDay.DUSK}
         ctx['lighting'].set_time(times.get(self.time, TimeOfDay.NOON), immediate=True)
+
+        # Set weather for storm
+        if self.time == 'storm':
+            ctx['weather'].set_weather(WeatherType.STORM, 1.0, immediate=True)
 
         self.env.render_background(ax, frame, ctx['lighting'])
 
@@ -2761,6 +3246,644 @@ class CreditsScene(Scene):
             frog.render(ax, local)
 
 
+class FlashbackScene(Scene):
+    """Pixar-style emotional flashback sequence"""
+    def __init__(self, start: int, duration: int, memory_type: str = 'happy'):
+        super().__init__(start, duration)
+        self.memory_type = memory_type  # 'happy', 'sad', 'origin'
+
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+
+        # Dreamy sepia/desaturated look
+        if self.memory_type == 'happy':
+            bg_color = '#FFF8DC'  # Warm sepia
+            vignette_color = '#DEB887'
+        elif self.memory_type == 'sad':
+            bg_color = '#E0E0E0'  # Cold grey
+            vignette_color = '#808080'
+        else:
+            bg_color = '#E6E6FA'  # Mystical lavender
+            vignette_color = '#9370DB'
+
+        ax.set_facecolor(bg_color)
+
+        # Vignette effect for dreamy feel
+        for i in range(8):
+            t = i / 8
+            vignette = patches.Rectangle((0, 0), WIDTH, HEIGHT,
+                                        fill=False, edgecolor=vignette_color,
+                                        linewidth=80 * (1 - t), alpha=0.1, zorder=100)
+            ax.add_patch(vignette)
+
+        # Floating memory particles
+        np.random.seed(int(self.start))
+        for i in range(30):
+            px = np.random.uniform(0, WIDTH)
+            py = (np.random.uniform(0, HEIGHT) + local * 0.5) % HEIGHT
+            size = np.random.uniform(5, 15)
+            alpha = 0.3 + 0.2 * np.sin(local * 0.02 + i)
+            ax.scatter([px], [py], c='white', s=size, alpha=alpha, zorder=50)
+
+        # Transition in/out ripple effect
+        if p < 0.15:
+            ripple_alpha = 1 - p / 0.15
+            for ring in range(10):
+                radius = (1 - p / 0.15) * WIDTH * (0.1 + ring * 0.1)
+                ax.add_patch(patches.Circle((WIDTH/2, HEIGHT/2), radius,
+                            fill=False, edgecolor='white',
+                            linewidth=5, alpha=ripple_alpha * 0.5, zorder=200))
+        elif p > 0.85:
+            ripple_alpha = (p - 0.85) / 0.15
+            for ring in range(10):
+                radius = ripple_alpha * WIDTH * (0.1 + ring * 0.1)
+                ax.add_patch(patches.Circle((WIDTH/2, HEIGHT/2), radius,
+                            fill=False, edgecolor='white',
+                            linewidth=5, alpha=ripple_alpha * 0.5, zorder=200))
+
+        # Memory content based on type
+        if self.memory_type == 'happy':
+            # Young Eli playing at the pond
+            young_eli = Frog(WIDTH * 0.4, HEIGHT * 0.25, 0.7)
+            young_eli.emotion = Emotion.HAPPY
+            young_eli.render(ax, local)
+            # Parent frogs watching
+            parent1 = Frog(WIDTH * 0.2, HEIGHT * 0.28, 1.0, 'green', 'Father')
+            parent1.emotion = Emotion.HAPPY
+            parent1.render(ax, local)
+            parent2 = Frog(WIDTH * 0.65, HEIGHT * 0.26, 0.9, 'green', 'Mother')
+            parent2.emotion = Emotion.LOVE
+            parent2.render(ax, local)
+            # Hearts floating
+            if local % 30 < 15:
+                ctx['particles'].emit_magic(WIDTH * 0.5, HEIGHT * 0.3, 'gold', 0.3)
+
+        elif self.memory_type == 'sad':
+            # The day the darkness came
+            young_eli = Frog(WIDTH * 0.5, HEIGHT * 0.25, 0.8)
+            young_eli.emotion = Emotion.SAD
+            young_eli.render(ax, local)
+            # Dark clouds approaching
+            for i in range(5):
+                cloud_x = WIDTH * (0.2 + i * 0.15) + np.sin(local * 0.02) * 20
+                cloud_y = HEIGHT * 0.7
+                cloud = patches.Ellipse((cloud_x, cloud_y), 150, 60,
+                                       color='#333333', alpha=0.7, zorder=30)
+                ax.add_patch(cloud)
+            if local % 20 == 0:
+                ctx['particles'].emit_dark_energy(WIDTH * 0.5, HEIGHT * 0.6, 0.5)
+
+        else:  # origin - the prophecy being told
+            # Ancient frog elder
+            elder = Frog(WIDTH * 0.5, HEIGHT * 0.3, 1.5, 'golden', 'Elder')
+            elder.set_glow(True, '#FFD700', 0.5)
+            elder.render(ax, local)
+            # Mystical runes floating
+            runes = ['◊', '○', '△', '☆', '◇']
+            for i, rune in enumerate(runes):
+                rune_x = WIDTH * 0.2 + i * WIDTH * 0.15
+                rune_y = HEIGHT * 0.6 + np.sin(local * 0.05 + i) * 30
+                ax.text(rune_x, rune_y, rune, fontsize=40,
+                       color='#FFD700', alpha=0.7 + 0.3 * np.sin(local * 0.1 + i),
+                       ha='center', va='center', zorder=40)
+
+        # "Memory" label
+        if p > 0.1 and p < 0.9:
+            ax.text(WIDTH * 0.1, HEIGHT * 0.92, "Memory...",
+                   fontsize=18, color='#888888', alpha=0.7, style='italic')
+
+
+class ProphecyScene(Scene):
+    """Ancient prophecy visualization with glowing runes"""
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+        ax.set_facecolor('#0a0014')
+
+        # Starfield
+        np.random.seed(777)
+        for i in range(150):
+            sx = np.random.uniform(0, WIDTH)
+            sy = np.random.uniform(0, HEIGHT)
+            twinkle = 0.3 + 0.7 * np.sin(local * 0.03 + i)
+            ax.scatter([sx], [sy], c='white', s=twinkle * 10, alpha=twinkle * 0.5, zorder=1)
+
+        # Central prophecy tablet
+        tablet = patches.FancyBboxPatch(
+            (WIDTH * 0.25, HEIGHT * 0.2), WIDTH * 0.5, HEIGHT * 0.6,
+            boxstyle="round,pad=0.02,rounding_size=20",
+            facecolor='#1a1a3a', edgecolor='#FFD700',
+            linewidth=3, alpha=0.9, zorder=10
+        )
+        ax.add_patch(tablet)
+
+        # Glowing border
+        glow_intensity = 0.5 + 0.3 * np.sin(local * 0.05)
+        for i in range(3):
+            glow_tablet = patches.FancyBboxPatch(
+                (WIDTH * 0.25 - i * 5, HEIGHT * 0.2 - i * 5),
+                WIDTH * 0.5 + i * 10, HEIGHT * 0.6 + i * 10,
+                boxstyle="round,pad=0.02,rounding_size=20",
+                fill=False, edgecolor='#FFD700',
+                linewidth=2, alpha=glow_intensity * (0.3 - i * 0.1), zorder=9
+            )
+            ax.add_patch(glow_tablet)
+
+        # Prophecy text appearing letter by letter
+        prophecy_lines = [
+            "When darkness rises from the deep,",
+            "And shadows make the brave men weep,",
+            "A child of pond, transformed by fate,",
+            "Shall rise to meet the darkest hate.",
+            "",
+            "The Emerald Guardian shall arise,",
+            "With courage true and ancient eyes,",
+            "To vanquish evil, restore the light,",
+            "And bring an end to endless night."
+        ]
+
+        chars_per_frame = 0.8
+        total_chars = int(local * chars_per_frame)
+        current_char = 0
+        y_pos = HEIGHT * 0.72
+
+        for line in prophecy_lines:
+            if current_char + len(line) <= total_chars:
+                displayed = line
+            elif current_char < total_chars:
+                displayed = line[:total_chars - current_char]
+            else:
+                displayed = ""
+
+            if displayed:
+                ax.text(WIDTH * 0.5, y_pos, displayed,
+                       fontsize=22, ha='center', va='center',
+                       color='#FFD700', fontfamily='serif', zorder=20)
+            current_char += len(line)
+            y_pos -= 45
+
+        # Floating runes around tablet
+        rune_symbols = ['☾', '☀', '★', '⚡', '✧', '◈', '❖', '✦']
+        for i, rune in enumerate(rune_symbols):
+            angle = (i / len(rune_symbols)) * 2 * np.pi + local * 0.01
+            dist = 280 + np.sin(local * 0.02 + i) * 30
+            rx = WIDTH * 0.5 + np.cos(angle) * dist
+            ry = HEIGHT * 0.5 + np.sin(angle) * dist * 0.5
+            rune_alpha = 0.5 + 0.5 * np.sin(local * 0.05 + i * 0.7)
+            ax.text(rx, ry, rune, fontsize=35, ha='center', va='center',
+                   color='#9370DB', alpha=rune_alpha, zorder=15)
+
+        if local % 15 == 0:
+            ctx['particles'].emit_magic(WIDTH * 0.5 + np.random.randn() * 200,
+                                        HEIGHT * 0.5 + np.random.randn() * 100, 'gold', 0.5)
+
+
+class TrainingMontageScene(Scene):
+    """Epic training montage showing Eli's growth"""
+    def __init__(self, start: int, duration: int):
+        super().__init__(start, duration)
+        self.stages = [
+            ('jumping', 'Learning to Jump'),
+            ('swimming', 'Mastering the Waters'),
+            ('magic', 'Channeling Inner Power'),
+            ('combat', 'Combat Training'),
+            ('meditation', 'Finding Inner Peace'),
+        ]
+
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+
+        # Determine current training stage
+        stage_idx = min(int(p * len(self.stages)), len(self.stages) - 1)
+        stage_progress = (p * len(self.stages)) % 1
+        stage_type, stage_name = self.stages[stage_idx]
+
+        # Background based on training
+        if stage_type == 'jumping':
+            ax.set_facecolor('#87CEEB')
+            # Grass field
+            grass = patches.Rectangle((0, 0), WIDTH, HEIGHT * 0.35,
+                                      color='#228B22', zorder=5)
+            ax.add_patch(grass)
+            # Hurdles
+            for i in range(5):
+                hx = WIDTH * (0.2 + i * 0.15)
+                hurdle = patches.Rectangle((hx - 10, HEIGHT * 0.35), 20, 50 + i * 20,
+                                          color='#8B4513', zorder=6)
+                ax.add_patch(hurdle)
+            # Eli jumping over hurdles
+            jump_phase = (local * 0.1) % (2 * np.pi)
+            eli_x = WIDTH * (0.15 + (local * 0.003) % 0.7)
+            eli_y = HEIGHT * 0.35 + abs(np.sin(jump_phase)) * 120
+            eli = Frog(eli_x, eli_y, 1.0)
+            eli.emotion = Emotion.DETERMINED
+            eli.render(ax, local)
+
+        elif stage_type == 'swimming':
+            ax.set_facecolor('#1E90FF')
+            # Underwater scene
+            for i in range(15):
+                bubble_x = np.random.uniform(0, WIDTH)
+                bubble_y = (local * 2 + i * 60) % HEIGHT
+                ax.add_patch(patches.Circle((bubble_x, bubble_y), 10 + i % 5,
+                            color='white', alpha=0.3, zorder=10))
+            # Eli swimming
+            swim_wave = np.sin(local * 0.15) * 50
+            eli = Frog(WIDTH * 0.5 + swim_wave, HEIGHT * 0.4 + np.cos(local * 0.1) * 30, 1.0)
+            eli.emotion = Emotion.DETERMINED
+            eli.render(ax, local)
+
+        elif stage_type == 'magic':
+            ax.set_facecolor('#1a0a3a')
+            # Magical training ground
+            for i in range(20):
+                sx = np.random.uniform(0, WIDTH)
+                sy = np.random.uniform(HEIGHT * 0.5, HEIGHT)
+                ax.scatter([sx], [sy], c='white', s=np.random.rand() * 15, alpha=0.5)
+            # Eli channeling power
+            eli = Frog(WIDTH * 0.5, HEIGHT * 0.3, 1.2)
+            eli.emotion = Emotion.POWERFUL
+            glow_intensity = 0.5 + 0.5 * np.sin(local * 0.1)
+            eli.set_glow(True, '#00FF7F', glow_intensity)
+            eli.render(ax, local)
+            # Magic circles
+            for i in range(3):
+                radius = 100 + i * 50 + np.sin(local * 0.05 + i) * 20
+                circle = patches.Circle((WIDTH * 0.5, HEIGHT * 0.3), radius,
+                                        fill=False, edgecolor='#00FF7F',
+                                        linewidth=2, alpha=0.5 - i * 0.15, zorder=8)
+                ax.add_patch(circle)
+            if local % 5 == 0:
+                ctx['particles'].emit_magic(WIDTH * 0.5, HEIGHT * 0.3, 'green', 1.5)
+
+        elif stage_type == 'combat':
+            ax.set_facecolor('#2a1a1a')
+            # Dojo-like setting
+            floor = patches.Rectangle((0, 0), WIDTH, HEIGHT * 0.3,
+                                      color='#8B4513', zorder=5)
+            ax.add_patch(floor)
+            # Eli fighting training dummies
+            eli = Frog(WIDTH * 0.4, HEIGHT * 0.25, 1.0)
+            eli.emotion = Emotion.DETERMINED
+            if local % 40 < 20:
+                eli.emotion = Emotion.ANGRY
+            eli.render(ax, local)
+            # Mentor watching
+            sage = WiseTurtle(WIDTH * 0.8, HEIGHT * 0.25, 1.0)
+            sage.render(ax, local)
+            if local % 30 == 0:
+                ctx['particles'].emit_magic(WIDTH * 0.4, HEIGHT * 0.25, 'green', 0.8)
+                ctx['camera'].shake(5, 0.9)
+
+        else:  # meditation
+            ax.set_facecolor('#0a1a2a')
+            # Peaceful night scene
+            np.random.seed(456)
+            for i in range(100):
+                ax.scatter([np.random.rand() * WIDTH], [np.random.rand() * HEIGHT],
+                          c='white', s=np.random.rand() * 10, alpha=0.6)
+            # Mountain silhouette
+            ax.add_patch(patches.Polygon([
+                [0, HEIGHT * 0.3], [WIDTH * 0.3, HEIGHT * 0.6],
+                [WIDTH * 0.6, HEIGHT * 0.4], [WIDTH, HEIGHT * 0.5], [WIDTH, HEIGHT * 0.3]
+            ], color='#1a1a2a', zorder=5))
+            # Eli meditating
+            eli = Frog(WIDTH * 0.5, HEIGHT * 0.35, 1.0)
+            eli.emotion = Emotion.NEUTRAL
+            eli.set_glow(True, '#ADD8E6', 0.3 + 0.2 * np.sin(local * 0.03))
+            eli.render(ax, local)
+            # Energy flowing upward
+            if local % 10 == 0:
+                ctx['particles'].emit_magic(WIDTH * 0.5, HEIGHT * 0.35, 'blue', 0.5)
+
+        # Stage title
+        title_alpha = 1 - abs(stage_progress - 0.5) * 2 if stage_progress < 0.2 else 0
+        title_alpha = max(0, min(1, (1 - stage_progress * 5) if stage_progress < 0.2 else 0))
+        if title_alpha > 0:
+            ax.text(WIDTH * 0.5, HEIGHT * 0.85, stage_name.upper(),
+                   fontsize=36, ha='center', fontweight='bold',
+                   color='white', alpha=title_alpha, zorder=100)
+
+        # Progress bar
+        bar_width = WIDTH * 0.6
+        ax.add_patch(patches.Rectangle((WIDTH * 0.2, HEIGHT * 0.05), bar_width, 15,
+                    color='#333333', zorder=100))
+        ax.add_patch(patches.Rectangle((WIDTH * 0.2, HEIGHT * 0.05), bar_width * p, 15,
+                    color='#FFD700', zorder=101))
+        ax.text(WIDTH * 0.5, HEIGHT * 0.08, "TRAINING PROGRESS",
+               fontsize=12, ha='center', color='white', zorder=102)
+
+
+class SacrificeScene(Scene):
+    """Emotional sacrifice and resurrection scene"""
+    def __init__(self, start: int, duration: int, is_sacrifice: bool = True):
+        super().__init__(start, duration)
+        self.is_sacrifice = is_sacrifice
+
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+        ax.set_facecolor('#0a0a15')
+
+        if self.is_sacrifice:
+            # Dark stormy battlefield
+            for i in range(30):
+                sx = np.random.uniform(0, WIDTH)
+                sy = np.random.uniform(HEIGHT * 0.6, HEIGHT)
+                ax.scatter([sx], [sy], c='white', s=2, alpha=0.3)
+
+            # Wounded friends in background
+            luna = Frog(WIDTH * 0.2, HEIGHT * 0.2, 0.8, 'princess', 'Luna')
+            luna.emotion = Emotion.SAD
+            luna.alpha = 0.7
+            luna.render(ax, local)
+
+            spark = Dragonfly(WIDTH * 0.3, HEIGHT * 0.3, 0.6)
+            spark.alpha = 0.7
+            spark.render(ax, local)
+
+            # Dark One threatening
+            dark_one = TheDarkOne(WIDTH * 0.8, HEIGHT * 0.5, 2.0)
+            dark_one.render(ax, local)
+
+            # Eli making the sacrifice
+            eli = Frog(WIDTH * 0.5, HEIGHT * 0.25, 1.2)
+            if p < 0.5:
+                eli.emotion = Emotion.DETERMINED
+                eli.set_glow(True, '#00FF7F', p * 2)
+            else:
+                eli.emotion = Emotion.POWERFUL
+                eli.set_glow(True, '#FFFFFF', 1.0)
+
+            # Rising into the air
+            eli_y = HEIGHT * 0.25 + p * HEIGHT * 0.3
+            eli.y = eli_y
+            eli.render(ax, local)
+
+            # Sacrificial light beam
+            if p > 0.3:
+                beam_alpha = (p - 0.3) / 0.7
+                beam = patches.Rectangle((WIDTH * 0.45, 0), WIDTH * 0.1, HEIGHT,
+                                         color='white', alpha=beam_alpha * 0.5, zorder=50)
+                ax.add_patch(beam)
+                ctx['particles'].emit_magic(WIDTH * 0.5, eli_y, 'white', 2.0)
+
+            # Screen flash at climax
+            if p > 0.9:
+                flash_alpha = (p - 0.9) / 0.1
+                ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT,
+                            color='white', alpha=flash_alpha, zorder=200))
+
+        else:  # Resurrection
+            # Gradual light returning
+            bg_brightness = int(10 + p * 100)
+            ax.set_facecolor(f'#{bg_brightness:02x}{bg_brightness:02x}{bg_brightness + 20:02x}')
+
+            # Celestial background
+            for i in range(50):
+                sx = np.random.uniform(0, WIDTH)
+                sy = np.random.uniform(HEIGHT * 0.5, HEIGHT)
+                ax.scatter([sx], [sy], c='white', s=5 + p * 10, alpha=p, zorder=1)
+
+            # Friends looking up with hope
+            luna = Frog(WIDTH * 0.3, HEIGHT * 0.2, 0.9, 'princess', 'Luna')
+            luna.emotion = Emotion.SHOCKED if p < 0.5 else Emotion.HAPPY
+            luna.render(ax, local)
+
+            spark = Dragonfly(WIDTH * 0.25, HEIGHT * 0.35, 0.7)
+            spark.render(ax, local)
+
+            sage = WiseTurtle(WIDTH * 0.7, HEIGHT * 0.22, 1.0)
+            sage.render(ax, local)
+
+            # Eli descending from light
+            if p > 0.3:
+                eli_progress = (p - 0.3) / 0.7
+                eli_y = HEIGHT * 0.8 - eli_progress * HEIGHT * 0.5
+                eli = Frog(WIDTH * 0.5, eli_y, 1.3)
+                eli.emotion = Emotion.POWERFUL
+                eli.has_crown = True
+                eli.set_glow(True, '#FFD700', 1.0 - eli_progress * 0.3)
+                eli.render(ax, local)
+
+                # Angelic light rays
+                for i in range(12):
+                    angle = (i / 12) * np.pi + np.pi / 2
+                    ray_len = 200 + 100 * eli_progress
+                    rx = WIDTH * 0.5 + np.cos(angle) * 50
+                    ry = eli_y
+                    rx2 = rx + np.cos(angle) * ray_len
+                    ry2 = ry + np.sin(angle) * ray_len
+                    ax.plot([rx, rx2], [ry, ry2], color='#FFD700',
+                           linewidth=3, alpha=0.5 * (1 - eli_progress * 0.5), zorder=40)
+
+            if local % 8 == 0:
+                ctx['particles'].emit_magic(WIDTH * 0.5, HEIGHT * 0.5, 'gold', 1.5)
+
+            # "THE PROPHECY IS FULFILLED" text
+            if p > 0.7:
+                text_alpha = (p - 0.7) / 0.3
+                ax.text(WIDTH * 0.5, HEIGHT * 0.9, "THE PROPHECY IS FULFILLED",
+                       fontsize=40, ha='center', fontweight='bold',
+                       color='#FFD700', alpha=text_alpha, zorder=100)
+
+
+class ArmyBattleScene(Scene):
+    """Epic army vs army battle scene"""
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+        ax.set_facecolor('#1a0a0a')
+
+        # Dramatic red sky
+        for i in range(5):
+            cloud_x = (local * 0.5 + i * 400) % (WIDTH + 400) - 200
+            cloud_y = HEIGHT * (0.75 + i * 0.04)
+            cloud = patches.Ellipse((cloud_x, cloud_y), 350, 80,
+                                   color='#2a0a0a', alpha=0.7, zorder=2)
+            ax.add_patch(cloud)
+
+        # Battle ground
+        ground = patches.Rectangle((0, 0), WIDTH, HEIGHT * 0.35,
+                                   color='#2a1a10', zorder=5)
+        ax.add_patch(ground)
+
+        # Good army (left side) - 25 frogs
+        np.random.seed(888)
+        for i in range(25):
+            fx = WIDTH * 0.1 + np.random.uniform(0, WIDTH * 0.25)
+            fy = HEIGHT * 0.1 + np.random.uniform(0, HEIGHT * 0.2)
+            frog = Frog(fx + np.sin(local * 0.1 + i) * 5, fy, 0.4 + np.random.rand() * 0.3)
+            frog.emotion = Emotion.DETERMINED if np.random.rand() > 0.3 else Emotion.ANGRY
+            frog.facing = 1
+            frog.render(ax, local)
+
+        # Evil army (right side) - dark creatures
+        for i in range(20):
+            ex = WIDTH * 0.65 + np.random.uniform(0, WIDTH * 0.25)
+            ey = HEIGHT * 0.1 + np.random.uniform(0, HEIGHT * 0.2)
+            # Dark shadow creatures
+            creature = patches.Ellipse((ex + np.sin(local * 0.08 + i) * 8, ey),
+                                       30 + np.random.rand() * 20, 20 + np.random.rand() * 15,
+                                       color='#2d0a4e', alpha=0.8, zorder=10)
+            ax.add_patch(creature)
+            # Evil eyes
+            ax.scatter([ex - 5, ex + 5], [ey + 5, ey + 5],
+                      c='#FF0000', s=10, alpha=0.9, zorder=11)
+
+        # Hero Eli in the center leading the charge
+        eli = Frog(WIDTH * 0.45, HEIGHT * 0.22, 1.3)
+        eli.emotion = Emotion.POWERFUL
+        eli.set_glow(True, '#00FF7F', 0.7 + 0.3 * np.sin(local * 0.1))
+        eli.render(ax, local)
+
+        # Allied characters
+        luna = Frog(WIDTH * 0.35, HEIGHT * 0.2, 0.9, 'princess', 'Luna')
+        luna.emotion = Emotion.DETERMINED
+        luna.render(ax, local)
+
+        spark = Dragonfly(WIDTH * 0.4, HEIGHT * 0.4, 0.8)
+        spark.render(ax, local)
+
+        # Battle effects
+        if local % 10 == 0:
+            # Random explosions
+            exp_x = np.random.uniform(WIDTH * 0.4, WIDTH * 0.6)
+            exp_y = np.random.uniform(HEIGHT * 0.15, HEIGHT * 0.3)
+            ctx['particles'].emit_explosion(exp_x, exp_y, 0.8)
+            ctx['camera'].shake(8, 0.92)
+
+        if local % 15 == 0:
+            # Magic blasts
+            ctx['particles'].emit_magic(WIDTH * 0.45, HEIGHT * 0.22, 'green', 1.0)
+
+        # War cry text
+        if p < 0.1:
+            text_alpha = p / 0.1
+            ax.text(WIDTH * 0.5, HEIGHT * 0.7, "FOR THE LIGHT!",
+                   fontsize=50, ha='center', fontweight='bold',
+                   color='#FFD700', alpha=text_alpha, zorder=100)
+
+        # Battle progress bar
+        good_progress = 0.3 + p * 0.5  # Heroes winning
+        bar_width = WIDTH * 0.4
+        ax.add_patch(patches.Rectangle((WIDTH * 0.3, HEIGHT * 0.92), bar_width, 20,
+                    color='#FF0000', zorder=100))
+        ax.add_patch(patches.Rectangle((WIDTH * 0.3, HEIGHT * 0.92), bar_width * good_progress, 20,
+                    color='#00FF00', zorder=101))
+
+
+class CoronationScene(Scene):
+    """Grand coronation and celebration finale"""
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+        ax.set_facecolor('#FFE4B5')
+
+        # Sunny celebration day
+        # Sun
+        sun = patches.Circle((WIDTH * 0.8, HEIGHT * 0.85), 80,
+                            color='#FFD700', zorder=3)
+        ax.add_patch(sun)
+        for i in range(12):
+            angle = (i / 12) * 2 * np.pi + local * 0.01
+            ray_len = 100 + np.sin(local * 0.05 + i) * 20
+            rx = WIDTH * 0.8 + np.cos(angle) * ray_len
+            ry = HEIGHT * 0.85 + np.sin(angle) * ray_len
+            ax.plot([WIDTH * 0.8, rx], [HEIGHT * 0.85, ry],
+                   color='#FFD700', linewidth=4, alpha=0.5, zorder=2)
+
+        # Decorated grass field
+        grass = patches.Rectangle((0, 0), WIDTH, HEIGHT * 0.35,
+                                  color='#32CD32', zorder=5)
+        ax.add_patch(grass)
+
+        # Flower decorations
+        np.random.seed(321)
+        for i in range(30):
+            fx = np.random.uniform(0, WIDTH)
+            fy = np.random.uniform(HEIGHT * 0.05, HEIGHT * 0.33)
+            colors = ['#FF69B4', '#FFD700', '#FF6347', '#BA55D3']
+            flower = patches.Circle((fx, fy), 8,
+                                   color=colors[i % len(colors)], zorder=6)
+            ax.add_patch(flower)
+
+        # Grand stage/platform
+        stage = patches.FancyBboxPatch(
+            (WIDTH * 0.35, HEIGHT * 0.35), WIDTH * 0.3, HEIGHT * 0.08,
+            boxstyle="round,pad=0.01,rounding_size=5",
+            facecolor='#8B4513', edgecolor='#FFD700', linewidth=3, zorder=10
+        )
+        ax.add_patch(stage)
+
+        # Eli being crowned
+        eli = Frog(WIDTH * 0.5, HEIGHT * 0.42, 1.5)
+        eli.emotion = Emotion.HAPPY
+        eli.has_crown = p > 0.4
+        eli.set_glow(True, '#FFD700', 0.5)
+        eli.render(ax, local)
+
+        # Crown descending animation
+        if p < 0.4:
+            crown_y = HEIGHT * 0.8 - p * HEIGHT * 0.35 / 0.4
+            crown_points = [
+                [WIDTH * 0.5 - 30, crown_y],
+                [WIDTH * 0.5 - 25, crown_y + 25],
+                [WIDTH * 0.5 - 15, crown_y + 12],
+                [WIDTH * 0.5, crown_y + 35],
+                [WIDTH * 0.5 + 15, crown_y + 12],
+                [WIDTH * 0.5 + 25, crown_y + 25],
+                [WIDTH * 0.5 + 30, crown_y],
+            ]
+            crown = patches.Polygon(crown_points, color='#FFD700', zorder=50)
+            ax.add_patch(crown)
+            for i in range(3):
+                glow = patches.Circle((WIDTH * 0.5, crown_y + 15), 40 + i * 15,
+                                      color='#FFD700', alpha=0.2 - i * 0.05, zorder=49)
+                ax.add_patch(glow)
+
+        # Crowd cheering (many frogs)
+        for i in range(40):
+            row = i // 10
+            col = i % 10
+            fx = WIDTH * (0.1 + col * 0.08)
+            fy = HEIGHT * (0.08 + row * 0.06)
+            bounce = abs(np.sin(local * 0.15 + i * 0.5)) * 10 if p > 0.5 else 0
+            frog = Frog(fx, fy + bounce, 0.35 + np.random.rand() * 0.15)
+            frog.emotion = Emotion.HAPPY
+            frog.render(ax, local)
+
+        # Friends on stage
+        luna = Frog(WIDTH * 0.38, HEIGHT * 0.42, 0.9, 'princess', 'Luna')
+        luna.emotion = Emotion.LOVE
+        luna.render(ax, local)
+
+        sage = WiseTurtle(WIDTH * 0.62, HEIGHT * 0.42, 1.0)
+        sage.render(ax, local)
+
+        spark = Dragonfly(WIDTH * 0.55, HEIGHT * 0.55, 0.7)
+        spark.render(ax, local)
+
+        # Confetti!
+        if p > 0.5:
+            if local % 3 == 0:
+                ctx['particles'].emit_magic(
+                    np.random.uniform(WIDTH * 0.2, WIDTH * 0.8),
+                    HEIGHT * 0.9, 'gold', 0.8)
+
+        # "THE EMERALD GUARDIAN" title
+        if p > 0.6:
+            title_alpha = min(1, (p - 0.6) / 0.2)
+            ax.text(WIDTH * 0.5, HEIGHT * 0.75, "THE EMERALD GUARDIAN",
+                   fontsize=55, ha='center', fontweight='bold',
+                   color='#006400', alpha=title_alpha, zorder=100)
+            ax.text(WIDTH * 0.5, HEIGHT * 0.65, "Long Live King Eli!",
+                   fontsize=30, ha='center', style='italic',
+                   color='#228B22', alpha=title_alpha, zorder=100)
+
+
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
 # ║                           EPIC SOUNDTRACK                                     ║
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
@@ -2884,94 +4007,247 @@ def save_wav(filename: str, audio: np.ndarray, sample_rate: int = 44100):
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 def build_scenes() -> List[Scene]:
-    """Build the complete movie scene list"""
+    """Build the complete movie scene list - 25+ minute EPIC MASTERPIECE"""
     scenes = []
     f = 0  # Frame counter
 
-    # ACT I - THE ORDINARY WORLD
-    scenes.append(TitleScene(f, 480)); f += 480  # 8 sec
-    scenes.append(ChapterScene(f, 180, 1, "The Prophecy")); f += 180
+    # ═══════════════════════════════════════════════════════════════════════════
+    #                    ACT I - THE ORDINARY WORLD (Chapters 1-3)
+    # ═══════════════════════════════════════════════════════════════════════════
 
-    # Peaceful pond establishing shot
-    s = StoryScene(f, 600, 'pond', 'day'); f += 600
-    s.add_char(Frog(WIDTH * 0.5, HEIGHT * 0.22, 1.0))
+    # Epic Title Sequence
+    scenes.append(TitleScene(f, 600)); f += 600  # 10 sec
+
+    # Chapter 1: The Ancient Prophecy
+    scenes.append(ChapterScene(f, 180, 1, "The Ancient Prophecy")); f += 180
+    scenes.append(ProphecyScene(f, 900)); f += 900  # 15 sec - prophecy with glowing runes
+
+    # Chapter 2: The Village of Frogs
+    scenes.append(ChapterScene(f, 180, 2, "The Village of Frogs")); f += 180
+    s = StoryScene(f, 720, 'village', 'day'); f += 720
+    s.add_char(Frog(WIDTH * 0.3, HEIGHT * 0.25, 0.8))
+    s.add_char(Frog(WIDTH * 0.5, HEIGHT * 0.22, 0.7))
+    s.add_char(Frog(WIDTH * 0.7, HEIGHT * 0.28, 0.9))
     scenes.append(s)
 
-    # The strange dreams
-    scenes.append(ChapterScene(f, 180, 2, "Strange Dreams")); f += 180
+    # Chapter 3: Young Eli's Life
+    scenes.append(ChapterScene(f, 180, 3, "Young Eli's Life")); f += 180
+    # Peaceful pond with young Eli
+    s = StoryScene(f, 600, 'pond', 'day'); f += 600
+    s.add_char(Frog(WIDTH * 0.5, HEIGHT * 0.22, 0.8, 'green', 'Young Eli'))
+    scenes.append(s)
+
+    # Flashback: Happy childhood memories
+    scenes.append(FlashbackScene(f, 600, 'happy')); f += 600  # 10 sec
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    #                    ACT II - CALL TO ADVENTURE (Chapters 4-6)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Chapter 4: Strange Dreams
+    scenes.append(ChapterScene(f, 180, 4, "Strange Dreams")); f += 180
     scenes.append(StoryScene(f, 480, 'pond', 'night')); f += 480
 
-    # ACT II - THE TRANSFORMATION
-    scenes.append(ChapterScene(f, 180, 3, "The Curse")); f += 180
-    scenes.append(TransformScene(f, 720)); f += 720  # 12 sec transformation
+    # Chapter 5: The Dark Curse Arrives
+    scenes.append(ChapterScene(f, 180, 5, "The Dark Curse")); f += 180
+    # Flashback: The day darkness came
+    scenes.append(FlashbackScene(f, 540, 'sad')); f += 540  # 9 sec
+    # The transformation
+    scenes.append(TransformScene(f, 900)); f += 900  # 15 sec dramatic transformation
 
-    scenes.append(ChapterScene(f, 180, 4, "Awakening")); f += 180
+    # Chapter 6: Awakening to a New Form
+    scenes.append(ChapterScene(f, 180, 6, "Awakening")); f += 180
     s = StoryScene(f, 600, 'pond', 'dawn'); f += 600
-    s.add_char(Frog(WIDTH * 0.5, HEIGHT * 0.22, 1.2))
+    eli = Frog(WIDTH * 0.5, HEIGHT * 0.22, 1.2)
+    eli.emotion = Emotion.SHOCKED
+    s.add_char(eli)
     scenes.append(s)
 
-    # ACT III - MEETING ALLIES
-    scenes.append(ChapterScene(f, 180, 5, "The Mentor")); f += 180
+    # ═══════════════════════════════════════════════════════════════════════════
+    #                    ACT III - MEETING THE MENTOR (Chapters 7-9)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Chapter 7: The Wise Turtle
+    scenes.append(ChapterScene(f, 180, 7, "The Wise Turtle")); f += 180
     s = StoryScene(f, 720, 'pond', 'day'); f += 720
     s.add_char(Frog(WIDTH * 0.35, HEIGHT * 0.22, 1.0))
-    s.add_char(WiseTurtle(WIDTH * 0.65, HEIGHT * 0.25, 1.2))
+    s.add_char(WiseTurtle(WIDTH * 0.65, HEIGHT * 0.25, 1.3))
     scenes.append(s)
 
-    scenes.append(ChapterScene(f, 180, 6, "Allies Gather")); f += 180
+    # Chapter 8: The Prophecy Revealed
+    scenes.append(ChapterScene(f, 180, 8, "The Prophecy Revealed")); f += 180
+    scenes.append(FlashbackScene(f, 600, 'origin')); f += 600  # Origin story flashback
+
+    # Chapter 9: Training Begins
+    scenes.append(ChapterScene(f, 180, 9, "Training Begins")); f += 180
+    scenes.append(TrainingMontageScene(f, 1500)); f += 1500  # 25 sec training montage
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    #                    ACT IV - GATHERING ALLIES (Chapters 10-12)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Chapter 10: Spark the Dragonfly
+    scenes.append(ChapterScene(f, 180, 10, "A Brave Companion")); f += 180
+    s = StoryScene(f, 600, 'pond', 'day'); f += 600
+    s.add_char(Frog(WIDTH * 0.4, HEIGHT * 0.22, 1.0))
+    s.add_char(Dragonfly(WIDTH * 0.6, HEIGHT * 0.45, 0.9))
+    scenes.append(s)
+
+    # Chapter 11: The Princess Luna
+    scenes.append(ChapterScene(f, 180, 11, "The Princess")); f += 180
+    s = StoryScene(f, 600, 'village', 'sunset'); f += 600
+    s.add_char(Frog(WIDTH * 0.35, HEIGHT * 0.22, 1.0))
+    s.add_char(Frog(WIDTH * 0.65, HEIGHT * 0.25, 1.0, 'princess', 'Luna'))
+    scenes.append(s)
+
+    # Chapter 12: The Alliance Forms
+    scenes.append(ChapterScene(f, 180, 12, "The Alliance Forms")); f += 180
     s = StoryScene(f, 720, 'pond', 'day'); f += 720
-    s.add_char(Frog(WIDTH * 0.3, HEIGHT * 0.22, 1.0))
-    s.add_char(Dragonfly(WIDTH * 0.5, HEIGHT * 0.5, 0.7))
-    s.add_char(Frog(WIDTH * 0.7, HEIGHT * 0.25, 0.9, 'princess', 'Luna'))
+    s.add_char(Frog(WIDTH * 0.25, HEIGHT * 0.22, 1.0, 'green', 'Eli'))
+    s.add_char(WiseTurtle(WIDTH * 0.4, HEIGHT * 0.25, 1.0))
+    s.add_char(Dragonfly(WIDTH * 0.55, HEIGHT * 0.5, 0.7))
+    s.add_char(Frog(WIDTH * 0.75, HEIGHT * 0.22, 0.9, 'princess', 'Luna'))
     scenes.append(s)
 
-    # ACT IV - THE TRIALS
-    scenes.append(ChapterScene(f, 180, 7, "The Dark Forest")); f += 180
+    # ═══════════════════════════════════════════════════════════════════════════
+    #                    ACT V - TESTS AND TRIALS (Chapters 13-16)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Chapter 13: Into the Dark Forest
+    scenes.append(ChapterScene(f, 180, 13, "The Dark Forest")); f += 180
     scenes.append(StoryScene(f, 600, 'forest', 'night')); f += 600
 
-    scenes.append(ChapterScene(f, 180, 8, "First Trial")); f += 180
-    scenes.append(BattleScene(f, 900, 'serpent')); f += 900  # 15 sec battle
+    # Chapter 14: First Boss - The Shadow Serpent
+    scenes.append(ChapterScene(f, 180, 14, "The Shadow Serpent")); f += 180
+    scenes.append(BattleScene(f, 1200, 'serpent')); f += 1200  # 20 sec boss battle
 
-    # ACT V - RISING ACTION
-    scenes.append(ChapterScene(f, 180, 9, "Love Blossoms")); f += 180
-    s = StoryScene(f, 600, 'pond', 'sunset'); f += 600
-    s.add_char(Frog(WIDTH * 0.4, HEIGHT * 0.22, 1.0))
-    s.add_char(Frog(WIDTH * 0.6, HEIGHT * 0.22, 0.9, 'princess', 'Luna'))
+    # Chapter 15: Journey to the Castle
+    scenes.append(ChapterScene(f, 180, 15, "The Dark Fortress")); f += 180
+    scenes.append(StoryScene(f, 600, 'castle', 'night')); f += 600
+
+    # Chapter 16: Second Boss - The Storm Heron
+    scenes.append(ChapterScene(f, 180, 16, "The Storm Heron")); f += 180
+    scenes.append(BattleScene(f, 1200, 'heron')); f += 1200  # 20 sec boss battle
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    #                    ACT VI - LOVE AND LOSS (Chapters 17-19)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Chapter 17: Love Blossoms
+    scenes.append(ChapterScene(f, 180, 17, "Love Blossoms")); f += 180
+    s = StoryScene(f, 720, 'pond', 'sunset'); f += 720
+    eli = Frog(WIDTH * 0.4, HEIGHT * 0.22, 1.0)
+    eli.emotion = Emotion.LOVE
+    s.add_char(eli)
+    luna = Frog(WIDTH * 0.6, HEIGHT * 0.22, 0.95, 'princess', 'Luna')
+    luna.emotion = Emotion.LOVE
+    s.add_char(luna)
     scenes.append(s)
 
-    scenes.append(ChapterScene(f, 180, 10, "The Storm Approaches")); f += 180
-    scenes.append(StoryScene(f, 480, 'pond', 'night')); f += 480
+    # Chapter 18: The Gathering Storm
+    scenes.append(ChapterScene(f, 180, 18, "The Gathering Storm")); f += 180
+    scenes.append(StoryScene(f, 480, 'pond', 'storm')); f += 480
 
-    # ACT VI - THE ORDEAL
-    scenes.append(ChapterScene(f, 180, 11, "The Predator")); f += 180
-    scenes.append(BattleScene(f, 900, 'heron')); f += 900
-
-    scenes.append(ChapterScene(f, 180, 12, "Darkest Hour")); f += 180
+    # Chapter 19: Darkest Hour
+    scenes.append(ChapterScene(f, 180, 19, "The Darkest Hour")); f += 180
     scenes.append(StoryScene(f, 600, 'forest', 'dark')); f += 600
 
-    # ACT VII - THE FINAL BATTLE
-    scenes.append(ChapterScene(f, 180, 13, "The Final Battle")); f += 180
-    scenes.append(BattleScene(f, 1200, 'dark_one')); f += 1200  # 20 sec final boss
+    # ═══════════════════════════════════════════════════════════════════════════
+    #                    ACT VII - THE FINAL CONFRONTATION (Chapters 20-23)
+    # ═══════════════════════════════════════════════════════════════════════════
 
-    # ACT VIII - RESOLUTION
-    scenes.append(ChapterScene(f, 180, 14, "Victory")); f += 180
+    # Chapter 20: Rally the Armies
+    scenes.append(ChapterScene(f, 180, 20, "Rally the Armies")); f += 180
+    s = StoryScene(f, 600, 'mountain', 'dawn'); f += 600
+    eli = Frog(WIDTH * 0.5, HEIGHT * 0.45, 1.3)
+    eli.emotion = Emotion.DETERMINED
+    eli.set_glow(True, '#00FF7F', 0.5)
+    s.add_char(eli)
+    scenes.append(s)
+
+    # Chapter 21: The March to War
+    scenes.append(ChapterScene(f, 180, 21, "The March to War")); f += 180
+    scenes.append(ArmyBattleScene(f, 1200)); f += 1200  # 20 sec army battle
+
+    # Chapter 22: The Sacrifice
+    scenes.append(ChapterScene(f, 180, 22, "The Ultimate Sacrifice")); f += 180
+    scenes.append(SacrificeScene(f, 900, True)); f += 900  # 15 sec sacrifice
+
+    # Chapter 23: Final Boss - The Dark One
+    scenes.append(ChapterScene(f, 180, 23, "The Dark One")); f += 180
+    scenes.append(BattleScene(f, 1500, 'dark_one')); f += 1500  # 25 sec final boss
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    #                    ACT VIII - RESURRECTION (Chapters 24-26)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Chapter 24: The Prophecy Fulfilled
+    scenes.append(ChapterScene(f, 180, 24, "The Prophecy Fulfilled")); f += 180
+    scenes.append(SacrificeScene(f, 900, False)); f += 900  # 15 sec resurrection
+
+    # Chapter 25: Victory
+    scenes.append(ChapterScene(f, 180, 25, "Victory")); f += 180
     s = StoryScene(f, 720, 'pond', 'dawn'); f += 720
+    hero = Frog(WIDTH * 0.5, HEIGHT * 0.22, 1.5)
+    hero.has_crown = True
+    hero.emotion = Emotion.POWERFUL
+    hero.set_glow(True, '#FFD700', 0.7)
+    s.add_char(hero)
+    s.add_char(Frog(WIDTH * 0.3, HEIGHT * 0.2, 0.9, 'princess', 'Luna'))
+    s.add_char(WiseTurtle(WIDTH * 0.7, HEIGHT * 0.22, 1.0))
+    scenes.append(s)
+
+    # Chapter 26: The Coronation
+    scenes.append(ChapterScene(f, 180, 26, "The Coronation")); f += 180
+    scenes.append(CoronationScene(f, 1200)); f += 1200  # 20 sec celebration
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    #                    ACT IX - EPILOGUE (Chapters 27-28)
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Chapter 27: Peace Restored
+    scenes.append(ChapterScene(f, 180, 27, "Peace Restored")); f += 180
+    s = StoryScene(f, 720, 'village', 'day'); f += 720
+    # Many happy frogs
+    for i in range(5):
+        frog = Frog(WIDTH * (0.15 + i * 0.15), HEIGHT * (0.2 + (i % 2) * 0.05), 0.7)
+        frog.emotion = Emotion.HAPPY
+        s.add_char(frog)
+    scenes.append(s)
+
+    # Chapter 28: The Legend Lives On
+    scenes.append(ChapterScene(f, 180, 28, "The Legend Lives On")); f += 180
+    s = StoryScene(f, 600, 'pond', 'sunset'); f += 600
     hero = Frog(WIDTH * 0.5, HEIGHT * 0.22, 1.3)
     hero.has_crown = True
-    hero.set_glow(True, '#FFD700', 0.5)
+    hero.emotion = Emotion.HAPPY
+    hero.set_glow(True, '#FFD700', 0.3)
     s.add_char(hero)
+    # Luna beside him
+    luna = Frog(WIDTH * 0.65, HEIGHT * 0.22, 1.1, 'princess', 'Luna')
+    luna.emotion = Emotion.LOVE
+    s.add_char(luna)
+    # Little froglets (children!)
+    for i in range(3):
+        child = Frog(WIDTH * (0.35 + i * 0.08), HEIGHT * 0.18, 0.4)
+        child.emotion = Emotion.HAPPY
+        s.add_char(child)
     scenes.append(s)
 
-    scenes.append(ChapterScene(f, 180, 15, "The Legend Lives On")); f += 180
-    s = StoryScene(f, 600, 'pond', 'day'); f += 600
-    s.add_char(Frog(WIDTH * 0.3, HEIGHT * 0.22, 1.0))
-    s.add_char(Frog(WIDTH * 0.5, HEIGHT * 0.22, 1.0))
-    s.add_char(Frog(WIDTH * 0.7, HEIGHT * 0.22, 1.0))
-    scenes.append(s)
+    # ═══════════════════════════════════════════════════════════════════════════
+    #                              CREDITS
+    # ═══════════════════════════════════════════════════════════════════════════
 
-    # CREDITS
-    scenes.append(CreditsScene(f, 1200)); f += 1200
+    scenes.append(CreditsScene(f, 1500)); f += 1500  # 25 sec credits
 
-    print(f"Total frames: {f} ({f/FPS:.1f} seconds / {f/FPS/60:.1f} minutes)")
+    # Print statistics
+    print("═" * 70)
+    print(f"  EPIC MASTERPIECE STATISTICS:")
+    print(f"  Total Scenes: {len(scenes)}")
+    print(f"  Total Frames: {f:,}")
+    print(f"  Runtime: {f/FPS:.0f} seconds ({f/FPS/60:.1f} minutes)")
+    print("═" * 70)
+
     return scenes
 
 
