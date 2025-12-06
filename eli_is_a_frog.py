@@ -5515,7 +5515,34 @@ class DangerousHorseRideScene(Scene):
 
             bella = Waitress(horse_x + 30, HEIGHT * 0.45 + leap_height, 0.75)
             bella.emotion = Emotion.DETERMINED
+            bella.celestial_form = leap_arc > 0.5  # Bella glows at apex
+            bella.celestial_power = leap_arc
             bella.render(ax, local)
+
+            # THUNDER'S TELEPATHIC VOICE - He speaks directly to their souls!
+            if 0.2 < leap_p < 0.4:
+                thunder_alpha = (leap_p - 0.2) / 0.2
+                ax.text(WIDTH/2, HEIGHT * 0.85, '< HOLD ON, BRAVE ONES! >',
+                       fontsize=24, ha='center', color='#9370DB',
+                       alpha=thunder_alpha, style='italic', fontweight='bold', zorder=100)
+                ax.text(WIDTH/2, HEIGHT * 0.78, '< I HAVE WAITED TEN THOUSAND YEARS FOR THIS LEAP! >',
+                       fontsize=18, ha='center', color='#C0C0C0',
+                       alpha=thunder_alpha * 0.8, style='italic', zorder=100)
+
+            # THE APEX MOMENT - Time seems to stop - Eli's declaration!
+            if 0.4 < leap_p < 0.6:
+                apex_alpha = 1 - abs(leap_p - 0.5) * 5
+                ax.text(WIDTH/2, HEIGHT * 0.95, '"BELLA!"',
+                       fontsize=40, ha='center', color='#90EE90',
+                       alpha=apex_alpha, fontweight='bold', zorder=100)
+                if leap_p > 0.45:
+                    ax.text(WIDTH/2, HEIGHT * 0.88, '"I LOVE YOU!"',
+                           fontsize=32, ha='center', color='#FFD700',
+                           alpha=(leap_p - 0.45) * 10, fontweight='bold', zorder=100)
+                if leap_p > 0.5:
+                    ax.text(WIDTH/2, HEIGHT * 0.80, '"FOREVER!"',
+                           fontsize=28, ha='center', color='#FF69B4',
+                           alpha=(leap_p - 0.5) * 10, fontweight='bold', zorder=100)
 
             # God rays during the leap (hope shining through)
             if leap_p > 0.2:
@@ -5628,13 +5655,39 @@ class DangerousHorseRideScene(Scene):
                     )
                     ax.add_patch(glow)
 
-            # Final emotional text
-            if safe_p > 0.5:
-                text_alpha = (safe_p - 0.5) / 0.5
-                ax.text(WIDTH/2, HEIGHT * 0.8,
-                       "\"We made it... together.\"",
+            # Final emotional dialogue - their first true conversation after the ordeal
+            if 0.4 < safe_p < 0.6:
+                dialogue_alpha = (safe_p - 0.4) / 0.2
+                ax.text(WIDTH/2, HEIGHT * 0.85, '"Bella... you\'re a..."',
+                       fontsize=22, ha='center', color='#90EE90',
+                       alpha=dialogue_alpha, style='italic', zorder=100)
+                ax.text(WIDTH/2, HEIGHT * 0.78, '"A Starborn. Yes."',
+                       fontsize=20, ha='center', color='#FFD700',
+                       alpha=dialogue_alpha * 0.9, style='italic', zorder=100)
+
+            elif 0.6 < safe_p < 0.8:
+                dialogue_alpha = (safe_p - 0.6) / 0.2
+                ax.text(WIDTH/2, HEIGHT * 0.85, '"Why didn\'t you tell me?"',
+                       fontsize=22, ha='center', color='#90EE90',
+                       alpha=dialogue_alpha, style='italic', zorder=100)
+                ax.text(WIDTH/2, HEIGHT * 0.78, '"I was afraid you\'d love me for what I am..."',
+                       fontsize=18, ha='center', color='#FFD700',
+                       alpha=dialogue_alpha * 0.9, style='italic', zorder=100)
+                ax.text(WIDTH/2, HEIGHT * 0.72, '"...not who I am."',
+                       fontsize=18, ha='center', color='#FFD700',
+                       alpha=dialogue_alpha * 0.8, style='italic', zorder=100)
+
+            elif safe_p > 0.8:
+                dialogue_alpha = (safe_p - 0.8) / 0.2
+                ax.text(WIDTH/2, HEIGHT * 0.88, '"I love YOU, Bella."',
+                       fontsize=24, ha='center', color='#90EE90',
+                       alpha=dialogue_alpha, fontweight='bold', style='italic', zorder=100)
+                ax.text(WIDTH/2, HEIGHT * 0.80, '"The waitress. The Starborn. All of you."',
+                       fontsize=20, ha='center', color='#90EE90',
+                       alpha=dialogue_alpha * 0.9, style='italic', zorder=100)
+                ax.text(WIDTH/2, HEIGHT * 0.72, '"Forever."',
                        fontsize=28, ha='center', color='#FFD700',
-                       alpha=text_alpha, style='italic', zorder=100)
+                       alpha=dialogue_alpha, fontweight='bold', zorder=100)
 
             # Hearts rising
             for i in range(5):
