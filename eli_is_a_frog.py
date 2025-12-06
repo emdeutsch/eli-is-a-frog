@@ -5637,16 +5637,6 @@ class DangerousHorseRideScene(Scene):
         ctx['particles'].update_and_render(ax, frame)
 
 
-def lerp_color(c1: str, c2: str, t: float) -> str:
-    """Interpolate between two hex colors"""
-    r1, g1, b1 = int(c1[1:3], 16), int(c1[3:5], 16), int(c1[5:7], 16)
-    r2, g2, b2 = int(c2[1:3], 16), int(c2[3:5], 16), int(c2[5:7], 16)
-    r = int(r1 + (r2 - r1) * t)
-    g = int(g1 + (g2 - g1) * t)
-    b = int(b1 + (b2 - b1) * t)
-    return f'#{r:02x}{g:02x}{b:02x}'
-
-
 class TransformScene(Scene):
     """Magical transformation with smooth animations"""
     def render(self, ax, frame: int, ctx: dict):
