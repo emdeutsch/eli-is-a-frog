@@ -827,47 +827,57 @@ class AdvancedParticleSystem:
                   trail_length=4)
 
     def update(self):
-        """Update all particles physics and state"""
+        """Update all particles with smooth physics"""
         for p in self.particles:
             if not p.active:
                 continue
 
-            # Store trail position
+            # Store trail position with smooth spacing
             if p.trail_length > 0:
                 p.trail.append((p.x, p.y))
                 if len(p.trail) > p.trail_length:
                     p.trail.pop(0)
 
-            # Physics update
+            # Smooth physics update with velocity damping
             p.vx += p.ax
             p.vy += p.ay
+            p.vx *= 0.995  # Subtle air resistance for smoother motion
+            p.vy *= 0.995
             p.x += p.vx
             p.y += p.vy
 
-            # Special behaviors by type
+            # Smoother special behaviors by type
             if p.particle_type == ParticleType.SNOW:
-                # Snow drifts side to side
-                p.x += np.sin(p.lifetime * 0.1) * 0.5
+                # Gentle snow drift with smooth sine wave
+                drift_phase = p.lifetime * 0.08 + p.x * 0.01
+                p.x += np.sin(drift_phase) * 0.4
             elif p.particle_type == ParticleType.FIRE:
-                # Fire flickers
-                p.x += np.random.uniform(-1, 1)
+                # Smooth fire flicker using perlin-like noise
+                flicker_phase = p.lifetime * 0.15
+                p.x += np.sin(flicker_phase) * 0.8 + np.sin(flicker_phase * 2.3) * 0.3
             elif p.particle_type == ParticleType.MAGIC:
-                # Magic sparkles
-                p.x += np.sin(p.lifetime * 0.2) * 0.3
-                p.y += np.cos(p.lifetime * 0.15) * 0.3
+                # Elegant magic spiral motion
+                spiral_phase = p.lifetime * 0.12
+                p.x += np.sin(spiral_phase) * 0.4
+                p.y += np.cos(spiral_phase * 0.8) * 0.35
+            elif p.particle_type == ParticleType.SOUL:
+                # Ethereal soul float with gentle wobble
+                float_phase = p.lifetime * 0.06
+                p.x += np.sin(float_phase + p.y * 0.02) * 0.3
+                p.vy = lerp(p.vy, 1.5, 0.02)  # Gentle upward drift
 
-            # Rotation
+            # Smooth rotation
             p.rotation += p.rotation_speed
 
-            # Size decay
+            # Smooth size decay
             p.size *= p.size_decay
 
-            # Lifetime
+            # Lifetime with smooth end
             p.lifetime -= 1
             if p.lifetime <= 0 or p.size < 0.5:
                 p.active = False
 
-        # Remove dead particles periodically
+        # Clean up dead particles
         if len(self.particles) > self.max_particles * 0.9:
             self.particles = [p for p in self.particles if p.active]
 
@@ -989,24 +999,32 @@ class Camera:
         self.target_y = target_y - self.height / 2
 
     def update(self):
-        """Update camera state"""
-        # Smooth position
+        """Update camera state with smooth interpolation"""
+        # Smooth position with eased interpolation
         self.x = lerp(self.x, self.target_x, self.follow_speed)
         self.y = lerp(self.y, self.target_y, self.follow_speed)
 
-        # Smooth zoom
+        # Smooth zoom with ease
         self.zoom = lerp(self.zoom, self.target_zoom, self.zoom_speed)
 
-        # Smooth letterbox
-        self.letterbox = lerp(self.letterbox, self.target_letterbox, 0.05)
+        # Smooth letterbox transition
+        self.letterbox = lerp(self.letterbox, self.target_letterbox, 0.06)
 
-        # Update shake
+        # Smooth organic shake using sine waves (not random noise)
         if self.shake_intensity > 0.1:
-            self.shake_offset_x = np.random.uniform(-1, 1) * self.shake_intensity
-            self.shake_offset_y = np.random.uniform(-1, 1) * self.shake_intensity
+            # Use multiple sine waves for smooth organic shake
+            t = np.random.rand() * 100  # Phase offset for variety
+            shake_x = (np.sin(t * 17.3) * 0.5 + np.sin(t * 23.7) * 0.3 + np.sin(t * 41.1) * 0.2)
+            shake_y = (np.sin(t * 19.1) * 0.5 + np.sin(t * 29.3) * 0.3 + np.sin(t * 37.9) * 0.2)
+            self.shake_offset_x = shake_x * self.shake_intensity
+            self.shake_offset_y = shake_y * self.shake_intensity
             self.shake_intensity *= self.shake_decay
         else:
-            self.shake_offset_x = 0
+            # Smooth return to center
+            self.shake_offset_x = lerp(self.shake_offset_x, 0, 0.2)
+            self.shake_offset_y = lerp(self.shake_offset_y, 0, 0.2)
+            if abs(self.shake_offset_x) < 0.1:
+                self.shake_offset_x = 0
             self.shake_offset_y = 0
             self.shake_intensity = 0
 
@@ -1554,28 +1572,29 @@ class Character:
         self.speech_timer = duration
 
     def update(self, frame: int):
-        """Update character state"""
+        """Update character state with smooth animations"""
         self.anim_frame = frame
 
-        # Blinking
+        # Smooth blinking with variable timing
         self.blink_timer -= 1
         if self.blink_timer <= 0:
-            self.blink_timer = np.random.randint(100, 200)
+            self.blink_timer = np.random.randint(120, 240)
 
-        # Movement interpolation
-        self.x = lerp(self.x, self.target_x, 0.08)
-        self.y = lerp(self.y, self.target_y, 0.08)
+        # Smoother movement interpolation with easing
+        move_speed = 0.06
+        self.x = lerp(self.x, self.target_x, move_speed)
+        self.y = lerp(self.y, self.target_y, move_speed)
 
-        # Jump physics
+        # Smooth jump physics with better arc
         if self.is_jumping:
             self.y += self.jump_velocity
-            self.jump_velocity -= 0.8
+            self.jump_velocity -= 0.65  # Slightly slower gravity for smoother arc
             if self.y <= self.ground_y:
                 self.y = self.ground_y
                 self.is_jumping = False
                 self.jump_velocity = 0
 
-        # Speech timer
+        # Speech timer with fade
         if self.speech_timer > 0:
             self.speech_timer -= 1
 
@@ -1648,24 +1667,32 @@ class Frog(Character):
             self.glow_color = color
 
     def render(self, ax, frame: int):
-        """Render the frog with all details"""
+        """Render the frog with all details and smooth animations"""
         if self.alpha <= 0:
             return
 
         s = self.scale * 50
         x, y = self.x, self.y
 
-        # Breathing animation
-        breath = np.sin(frame * 0.05 + self.breath_phase) * 2
+        # Smooth breathing animation with multiple frequencies for realism
+        breath = (np.sin(frame * 0.04 + self.breath_phase) * 1.5 +
+                  np.sin(frame * 0.11 + self.breath_phase * 0.7) * 0.5)
 
-        # Glow effect
+        # Subtle idle sway animation
+        idle_sway_x = np.sin(frame * 0.02 + self.breath_phase) * s * 0.03
+        idle_sway_y = np.sin(frame * 0.025 + self.breath_phase * 1.3) * s * 0.02
+        x += idle_sway_x
+        y += idle_sway_y
+
+        # Enhanced glow effect with pulsing
         if self.is_glowing and self.glow_intensity > 0:
-            for i in range(3):
-                glow_size = s * (2.5 + i * 0.5)
+            pulse = 0.85 + 0.15 * np.sin(frame * 0.08)
+            for i in range(4):
+                glow_size = s * (2.2 + i * 0.6) * pulse
                 glow = patches.Circle(
                     (x, y), glow_size,
                     color=self.glow_color,
-                    alpha=self.glow_intensity * (0.15 - i * 0.04) * self.alpha,
+                    alpha=self.glow_intensity * (0.18 - i * 0.04) * self.alpha,
                     zorder=9
                 )
                 ax.add_patch(glow)
@@ -3013,64 +3040,124 @@ class Scene:
 
 
 class TitleScene(Scene):
-    """Epic title screen"""
+    """Epic title screen with polished animations"""
     def render(self, ax, frame: int, ctx: dict):
         p = self.progress(frame)
         local = frame - self.start
         ax.set_facecolor('#000008')
 
-        # Stars
+        # Smooth twinkling stars with varied speeds
         np.random.seed(42)
-        for i in range(120):
-            twinkle = 0.4 + 0.6 * abs(np.sin(local * 0.04 + i))
-            ax.scatter([np.random.rand() * WIDTH], [np.random.rand() * HEIGHT],
-                      c='white', s=twinkle * 20, alpha=twinkle, zorder=1)
+        for i in range(150):
+            # Each star has unique twinkle frequency for more organic feel
+            twinkle_freq = 0.02 + (i % 10) * 0.005
+            twinkle = 0.3 + 0.7 * (0.5 + 0.5 * np.sin(local * twinkle_freq + i * 0.7))
+            star_x = np.random.rand() * WIDTH
+            star_y = np.random.rand() * HEIGHT
+            star_size = (5 + np.random.rand() * 15) * twinkle
+            ax.scatter([star_x], [star_y], c='white', s=star_size, alpha=twinkle * 0.8, zorder=1)
 
-        # Title with elastic entrance
-        if p > 0.1:
-            t_prog = Easing.ease_out_elastic(min(1, (p - 0.1) / 0.3))
-            for i in range(3):
-                ax.text(WIDTH/2, HEIGHT * 0.62, "ELI IS A FROG",
-                       fontsize=int(70 * t_prog), fontweight='bold', ha='center', va='center',
-                       color='#00FF00', alpha=0.2 - i * 0.05, zorder=10)
-            ax.text(WIDTH/2, HEIGHT * 0.62, "ELI IS A FROG",
-                   fontsize=int(70 * t_prog), fontweight='bold', ha='center', va='center',
-                   color='#90EE90', zorder=11)
+        # Smooth shooting star occasionally
+        if (local // 120) % 3 == 0:
+            shoot_p = (local % 120) / 120
+            if shoot_p < 0.3:
+                shoot_eased = Easing.ease_out_cubic(shoot_p / 0.3)
+                shoot_x = WIDTH * 0.8 - shoot_eased * WIDTH * 0.5
+                shoot_y = HEIGHT * 0.9 - shoot_eased * HEIGHT * 0.3
+                trail_len = 80
+                for t in range(5):
+                    trail_alpha = (1 - t * 0.2) * (1 - shoot_p / 0.3)
+                    ax.plot([shoot_x + t * 15, shoot_x + t * 15 + trail_len],
+                           [shoot_y - t * 5, shoot_y - t * 5 + trail_len * 0.4],
+                           color='white', linewidth=3 - t * 0.5, alpha=trail_alpha * 0.6, zorder=2)
 
-        # Subtitle fade
-        if p > 0.35:
-            s_alpha = Easing.ease_out_cubic(min(1, (p - 0.35) / 0.2))
-            ax.text(WIDTH/2, HEIGHT * 0.48, "THE LEGEND OF THE EMERALD GUARDIAN",
+        # Title with smooth elastic entrance and glow
+        if p > 0.08:
+            t_prog = Easing.ease_out_elastic(min(1, (p - 0.08) / 0.35))
+            title_y = HEIGHT * 0.62 + (1 - t_prog) * 50  # Slide in from above
+
+            # Pulsing glow behind title
+            glow_pulse = 0.8 + 0.2 * np.sin(local * 0.05)
+            for i in range(4):
+                glow_alpha = (0.15 - i * 0.03) * t_prog * glow_pulse
+                ax.text(WIDTH/2, title_y, "ELI IS A FROG",
+                       fontsize=int(72 * t_prog), fontweight='bold', ha='center', va='center',
+                       color='#00FF00', alpha=glow_alpha, zorder=10)
+
+            # Main title
+            ax.text(WIDTH/2, title_y, "ELI IS A FROG",
+                   fontsize=int(72 * t_prog), fontweight='bold', ha='center', va='center',
+                   color='#90EE90', alpha=t_prog, zorder=11)
+
+        # Smooth subtitle fade with slight rise
+        if p > 0.32:
+            s_prog = min(1, (p - 0.32) / 0.2)
+            s_alpha = Easing.ease_out_cubic(s_prog)
+            subtitle_y = HEIGHT * 0.48 + (1 - s_prog) * 20
+            ax.text(WIDTH/2, subtitle_y, "THE LEGEND OF THE EMERALD GUARDIAN",
                    fontsize=26, ha='center', color='#FFD700', alpha=s_alpha, zorder=11)
 
-        # Dancing frogs
-        if p > 0.5:
+        # Smooth dancing frogs with staggered entrance
+        if p > 0.45:
             for i in range(5):
-                bounce = abs(np.sin(local * 0.12 + i * 0.9)) * 25
-                frog = Frog(WIDTH * (0.18 + i * 0.16), HEIGHT * 0.2 + bounce, 0.6)
-                frog.emotion = Emotion.HAPPY
-                frog.alpha = min(1, (p - 0.5) / 0.2)
-                frog.render(ax, local)
+                frog_delay = i * 0.03
+                frog_prog = max(0, min(1, (p - 0.45 - frog_delay) / 0.15))
+                if frog_prog > 0:
+                    frog_alpha = Easing.ease_out_cubic(frog_prog)
+                    # Smooth bounce with easing
+                    bounce_phase = local * 0.1 + i * 1.2
+                    bounce = Easing.ease_out_cubic(abs(np.sin(bounce_phase))) * 30
+                    frog = Frog(WIDTH * (0.18 + i * 0.16), HEIGHT * 0.2 + bounce, 0.55 + i * 0.02)
+                    frog.emotion = Emotion.HAPPY
+                    frog.alpha = frog_alpha
+                    frog.render(ax, local)
 
-        if local % 10 == 0:
-            ctx['particles'].emit_magic(WIDTH/2 + np.random.randn() * 150, HEIGHT * 0.6, 'gold', 0.6)
+        # Smooth particle emission in circular pattern
+        if local % 8 == 0:
+            emit_angle = local * 0.08
+            emit_x = WIDTH/2 + np.cos(emit_angle) * 120
+            emit_y = HEIGHT * 0.55 + np.sin(emit_angle) * 40
+            ctx['particles'].emit_magic(emit_x, emit_y, 'gold', 0.5)
 
 
 class ChapterScene(Scene):
-    """Chapter title card"""
+    """Chapter title card with smooth transitions"""
     def __init__(self, start: int, duration: int, num: int, title: str):
         super().__init__(start, duration)
         self.num, self.title = num, title
 
     def render(self, ax, frame: int, ctx: dict):
         p = self.progress(frame)
+        local = frame - self.start
         ax.set_facecolor('#000000')
-        alpha = 1 - abs(p - 0.5) * 2 if p < 0.15 or p > 0.85 else 1
-        alpha = max(0, min(1, alpha * 2))
 
+        # Smooth fade in/out with easing
+        if p < 0.2:
+            alpha = Easing.ease_out_cubic(p / 0.2)
+        elif p > 0.8:
+            alpha = Easing.ease_in_cubic((1 - p) / 0.2)
+        else:
+            alpha = 1.0
+
+        # Subtle decorative lines that animate in
+        line_prog = min(1, p * 3) if p < 0.3 else 1
+        line_width = WIDTH * 0.25 * Easing.ease_out_cubic(line_prog)
+        if line_width > 10:
+            ax.plot([WIDTH/2 - line_width, WIDTH/2 + line_width],
+                   [HEIGHT * 0.58, HEIGHT * 0.58],
+                   color='#FFD700', linewidth=1, alpha=alpha * 0.5, zorder=9)
+            ax.plot([WIDTH/2 - line_width, WIDTH/2 + line_width],
+                   [HEIGHT * 0.38, HEIGHT * 0.38],
+                   color='#FFD700', linewidth=1, alpha=alpha * 0.5, zorder=9)
+
+        # Chapter number with subtle pulse
+        pulse = 1.0 + 0.02 * np.sin(local * 0.08)
         ax.text(WIDTH/2, HEIGHT * 0.55, f"— CHAPTER {self.num} —",
-               fontsize=24, ha='center', color='#FFD700', alpha=alpha, zorder=10)
-        ax.text(WIDTH/2, HEIGHT * 0.42, self.title.upper(),
+               fontsize=int(24 * pulse), ha='center', color='#FFD700', alpha=alpha * 0.9, zorder=10)
+
+        # Title slides in smoothly
+        title_offset = (1 - min(1, p * 4)) * 30 if p < 0.25 else 0
+        ax.text(WIDTH/2, HEIGHT * 0.43 - title_offset, self.title.upper(),
                fontsize=48, fontweight='bold', ha='center', color='white', alpha=alpha, zorder=10)
 
 
@@ -3120,44 +3207,87 @@ class StoryScene(Scene):
 
 
 class TransformScene(Scene):
-    """Magical transformation"""
+    """Magical transformation with smooth animations"""
     def render(self, ax, frame: int, ctx: dict):
         p = self.progress(frame)
         local = frame - self.start
+
+        # Smooth eased progress for key animations
+        eased_p = Easing.ease_in_out_cubic(p)
+
+        # Dynamic background color shift
+        bg_hue = 0.75 + p * 0.1  # Purple to more violet
         ax.set_facecolor('#1a0a2e')
 
-        # Swirling vortex
-        for i in range(25):
-            angle = (i / 25) * 2 * np.pi + local * 0.025
-            dist = 120 + 200 * (1 - abs(p - 0.5) * 2)
-            px, py = WIDTH/2 + np.cos(angle) * dist, HEIGHT/2 + np.sin(angle) * dist * 0.7
-            ax.scatter([px], [py], c='#9400D3' if i % 2 else '#00FF7F', s=15 + 15 * np.sin(local * 0.05 + i), alpha=0.7, zorder=5)
+        # Smooth swirling vortex with multiple layers
+        for layer in range(2):
+            layer_offset = layer * np.pi
+            for i in range(30):
+                angle = (i / 30) * 2 * np.pi + local * (0.02 + layer * 0.01) + layer_offset
+                # Smooth pulsing distance
+                pulse = Easing.smooth_step(1 - abs(eased_p - 0.5) * 2)
+                dist = 100 + 220 * pulse + np.sin(local * 0.03 + i * 0.5) * 20
+                px = WIDTH/2 + np.cos(angle) * dist
+                py = HEIGHT/2 + np.sin(angle) * dist * 0.7
+                # Smooth size pulsing
+                size = 12 + 12 * (0.5 + 0.5 * np.sin(local * 0.04 + i * 0.3))
+                color = '#9400D3' if (i + layer) % 2 else '#00FF7F'
+                alpha = 0.6 * (0.5 + 0.5 * np.sin(local * 0.05 + i))
+                ax.scatter([px], [py], c=color, s=size, alpha=alpha, zorder=5 + layer)
 
-        # Rings
-        for r in range(3):
-            ax.add_patch(patches.Circle((WIDTH/2, HEIGHT/2), 100 + r * 35 + np.sin(local * 0.08) * 15,
-                        fill=False, edgecolor='#FFD700', linewidth=2, alpha=0.5 - r * 0.1, zorder=10))
+        # Smooth pulsing magic rings
+        for r in range(4):
+            ring_pulse = np.sin(local * 0.06 + r * 0.8) * 0.5 + 0.5
+            ring_radius = 80 + r * 40 + ring_pulse * 25
+            ring_alpha = (0.5 - r * 0.1) * (0.7 + 0.3 * ring_pulse)
+            ring = patches.Circle((WIDTH/2, HEIGHT/2), ring_radius,
+                        fill=False, edgecolor='#FFD700', linewidth=2 + ring_pulse,
+                        alpha=ring_alpha, zorder=10)
+            ax.add_patch(ring)
 
-        # Human fade
-        if p < 0.4:
-            alpha = 1 - p * 2.5
-            ax.add_patch(patches.Circle((WIDTH/2, HEIGHT/2 + 70), 30, color='white', alpha=alpha, zorder=15))
-            ax.add_patch(patches.Rectangle((WIDTH/2 - 20, HEIGHT/2 - 40), 40, 90, color='white', alpha=alpha, zorder=15))
+        # Smooth human silhouette fade
+        if p < 0.45:
+            fade_p = Easing.ease_in_cubic(p / 0.45)
+            alpha = 1 - fade_p
+            # Dissolving effect with multiple fading circles
+            for i in range(5):
+                offset_x = np.sin(local * 0.1 + i) * 5 * fade_p
+                offset_y = np.cos(local * 0.12 + i) * 3 * fade_p
+                ax.add_patch(patches.Circle((WIDTH/2 + offset_x, HEIGHT/2 + 70 + offset_y),
+                            30 * (1 - fade_p * 0.3), color='white', alpha=alpha * (1 - i * 0.15), zorder=15))
+            ax.add_patch(patches.Rectangle((WIDTH/2 - 20, HEIGHT/2 - 40), 40, 90,
+                        color='white', alpha=alpha * 0.9, zorder=15))
 
-        # Frog emerge
-        if p > 0.25:
-            frog = Frog(WIDTH/2, HEIGHT/2, 0.8 + p)
-            frog.alpha = min(1, (p - 0.25) / 0.4)
-            frog.emotion = Emotion.SHOCKED if p < 0.65 else Emotion.POWERFUL
-            frog.set_glow(True, '#00FF7F', frog.alpha)
+        # Smooth frog emergence with elastic effect
+        if p > 0.2:
+            emerge_p = min(1, (p - 0.2) / 0.5)
+            eased_emerge = Easing.ease_out_elastic(emerge_p) if emerge_p < 0.8 else 1.0
+            scale = 0.6 + eased_emerge * 0.8
+            frog = Frog(WIDTH/2, HEIGHT/2, scale)
+            frog.alpha = min(1, emerge_p * 1.5)
+            frog.emotion = Emotion.SHOCKED if p < 0.6 else Emotion.POWERFUL
+            glow_intensity = min(1, emerge_p * 1.2)
+            frog.set_glow(True, '#00FF7F', glow_intensity)
             frog.render(ax, local)
 
-        if local % 4 == 0:
-            ctx['particles'].emit_magic(WIDTH/2 + np.random.randn() * 60, HEIGHT/2 + np.random.randn() * 60, 'purple', 0.8)
+        # Smooth particle emission
+        if local % 3 == 0:
+            angle = local * 0.1
+            emit_x = WIDTH/2 + np.cos(angle) * 50
+            emit_y = HEIGHT/2 + np.sin(angle) * 30
+            ctx['particles'].emit_magic(emit_x, emit_y, 'purple', 0.7)
 
-        if p > 0.8:
+        # Smooth text fade in
+        if p > 0.78:
+            text_alpha = Easing.ease_out_cubic((p - 0.78) / 0.22)
+            # Glow effect behind text
+            for i in range(3):
+                ax.text(WIDTH/2, HEIGHT * 0.12, "THE TRANSFORMATION IS COMPLETE",
+                       fontsize=32, ha='center', color='#00FF00',
+                       alpha=text_alpha * (0.2 - i * 0.05), fontweight='bold', zorder=99)
             ax.text(WIDTH/2, HEIGHT * 0.12, "THE TRANSFORMATION IS COMPLETE",
-                   fontsize=32, ha='center', color='#FFD700', alpha=(p - 0.8) / 0.2, fontweight='bold', zorder=100)
+                   fontsize=32, ha='center', color='#FFD700',
+                   alpha=text_alpha, fontweight='bold', zorder=100)
 
 
 class BattleScene(Scene):
