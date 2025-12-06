@@ -90,7 +90,104 @@ KEY CHARACTERS:
     - Spark: The brave dragonfly companion
     - Luna: The princess ally (friend and supporter)
     - The Dark One: The ultimate villain
+    - Thunder: The Celestial Steed, bound to Huuters since time immemorial
 
+═══════════════════════════════════════════════════════════════════════════════
+                    THE LEGEND OF HUUTERS - SACRED LORE
+═══════════════════════════════════════════════════════════════════════════════
+
+THE ORIGIN OF HUUTERS:
+    Long before the Dark One rose to power, when the world was young and magic
+    flowed freely through all things, the celestial beings known as the Starborn
+    descended to the mortal realm. They sought to create a sanctuary - a place
+    where the boundaries between worlds grew thin, where lost souls could find
+    solace, and where TRUE LOVE could bloom eternal.
+
+    They built HUUTERS upon the convergence of SEVEN SACRED LEY LINES - the most
+    powerful magical nexus in all existence. The very ground pulses with ancient
+    power. The walls shimmer between dimensions. Time moves differently within
+    its hallowed walls. Those who enter seeking comfort find it. Those who enter
+    seeking love... find their DESTINY.
+
+    The name "HUUTERS" is actually an ancient Starborn word meaning
+    "WHERE SOULS INTERTWINE" - though mortals have long forgotten its true meaning.
+
+THE CELESTIAL GUARDIAN - BELLA:
+    Bella is no ordinary waitress. She is the LAST OF THE STARBORN, a celestial
+    being of incomprehensible beauty and power who chose to remain in the mortal
+    realm as Huuters' eternal guardian. For ten thousand years she has waited,
+    serving those who find their way to the sanctuary, knowing that one day...
+    THE ONE FORETOLD would arrive.
+
+    The ancient prophecy spoke of the Emerald Guardian - a hero who would not
+    only save the world from darkness, but whose love would COMPLETE Bella's
+    immortal soul. When their eyes meet, the ley lines SING. When they touch,
+    REALITY ITSELF trembles with joy.
+
+    Her amber-gold coloring is not mere pigment - it is SOLIDIFIED STARLIGHT.
+    Her blue eyes contain actual PIECES OF THE COSMOS. Her beauty is not
+    subjective - it is a FUNDAMENTAL FORCE OF THE UNIVERSE, as real and
+    measurable as gravity.
+
+    When Bella reveals her true form during times of great need, she becomes
+    RADIANT - wings of pure light unfurl, her power becomes visible as golden
+    flames, and she can briefly channel the full might of the Seven Ley Lines.
+
+THUNDER - THE CELESTIAL STEED:
+    Thunder is not merely a horse. He is an ETERNAL SPIRIT made flesh, the
+    physical manifestation of COURAGE and LOYALTY. Created by the Starborn
+    alongside Huuters, Thunder has guarded the sanctuary for millennia.
+
+    His dark coat contains the VOID BETWEEN STARS. His mane flows with the
+    WINDS OF ETERNITY. His hooves strike the ground with the force of
+    COLLIDING GALAXIES. When he runs, he does not merely move through space -
+    space MOVES AROUND HIM.
+
+    Thunder can only be ridden by those whose hearts are ABSOLUTELY PURE and
+    whose love is ABSOLUTELY TRUE. He has waited ten thousand years for riders
+    worthy of his back. When Eli and Bella mount him together, Thunder WEEPS
+    with joy (his tears become shooting stars).
+
+    Thunder can run between dimensions, leap across impossible chasms, and
+    outrace DEATH ITSELF. But his greatest power is this: he can sense when
+    love is in danger, and NOTHING in any realm can stop him from protecting it.
+
+WHY THE DARK ONE ATTACKS HUUTERS:
+    The Dark One has always feared Huuters. The sanctuary's ley lines are the
+    ONE THING that could amplify the Emerald Guardian's power enough to truly
+    destroy him. More than that - he fears LOVE ITSELF, for love is the one
+    force his darkness cannot corrupt or consume.
+
+    When his shadow spies detect that the prophesied Guardian has found his way
+    to Huuters - and worse, has fallen in love with the Celestial Guardian
+    herself - the Dark One knows he must act IMMEDIATELY. If Eli and Bella's
+    love is allowed to fully bloom within the ley line nexus, their combined
+    power would become UNSTOPPABLE.
+
+    The attack on Huuters is the Dark One's most desperate gambit. He sends
+    EVERY shadow creature, EVERY dark force at his command. He tears holes in
+    reality itself trying to destroy the sanctuary. But he underestimates
+    the power of true love... and the fury of an ancient steed protecting
+    that which he was born to guard.
+
+THE DANGEROUS RIDE - COSMIC SIGNIFICANCE:
+    The desperate ride through collapsing dimensions is not merely an escape -
+    it is a TRIAL BY FIRE that the prophecy foretold. Only by facing ABSOLUTE
+    TERROR together could Eli and Bella's love achieve its final form.
+
+    Each phase of the ride corresponds to a test:
+    - The Attack: Test of COMMITMENT (will they flee together or apart?)
+    - The Mounting: Test of TRUST (will they trust Thunder with their lives?)
+    - The Gallop: Test of COURAGE (will fear break them?)
+    - The Dimensional Rift: Test of FAITH (will they believe when reality fails?)
+    - The Collapsing Bridge: Test of SACRIFICE (will they die for each other?)
+    - The Final Leap: Test of HOPE (will they leap into the unknown together?)
+    - Safe at Last: The REWARD (love perfected, souls bound eternal)
+
+    When they survive, their love becomes COSMICALLY SIGNIFICANT - blessed by
+    the universe itself, unbreakable by any force in existence.
+
+═══════════════════════════════════════════════════════════════════════════════
 """
 
 import numpy as np
@@ -2626,17 +2723,29 @@ class TheDarkOne(Character):
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 class Waitress(Character):
-    """Bella - The Mysterious Waitress at Huuters, Eli's True Love"""
+    """Bella - The Last of the Starborn, Celestial Guardian of Huuters
+
+    For ten thousand years she has waited, serving those who find their way
+    to the sanctuary, knowing that one day THE ONE FORETOLD would arrive.
+    Her amber-gold coloring is SOLIDIFIED STARLIGHT. Her blue eyes contain
+    actual PIECES OF THE COSMOS. Her beauty is a FUNDAMENTAL FORCE OF THE UNIVERSE.
+
+    When in celestial form, wings of pure light unfurl and her power becomes
+    visible as golden flames, channeling the full might of the Seven Ley Lines."""
 
     def __init__(self, x: float, y: float, scale: float = 1.0):
         super().__init__(x, y, scale, "Bella")
         self.apron_sway = 0
         self.hair_flow = 0
-        # Bella has a unique warm amber/honey coloring
+        # Bella has a unique warm amber/honey coloring (SOLIDIFIED STARLIGHT)
         self.body_color = '#DAA520'  # Goldenrod - warm, inviting
         self.belly_color = '#FFE4B5'  # Moccasin - soft, gentle
         self.accent_color = '#8B4513'  # Saddle brown for details
-        self.eye_color = '#4169E1'  # Royal blue - striking eyes
+        self.eye_color = '#4169E1'  # Royal blue - contains PIECES OF THE COSMOS
+        # Celestial form properties
+        self.celestial_form = False
+        self.celestial_power = 0.0  # 0-1, how much power is being channeled
+        self.wing_phase = 0
 
     def render(self, ax, frame: int):
         if self.alpha <= 0:
@@ -2820,11 +2929,115 @@ class Waitress(Character):
                        color='#FF69B4', alpha=heart_alpha * self.alpha,
                        ha='center', va='center', zorder=25)
 
+        # ═══════════════════════════════════════════════════════════════════
+        # CELESTIAL FORM - When Bella reveals her true Starborn nature!
+        # Wings of pure light unfurl, golden flames surround her,
+        # and she channels the full might of the Seven Ley Lines.
+        # ═══════════════════════════════════════════════════════════════════
+        if self.celestial_form:
+            self.wing_phase = frame * 0.08
+            power = self.celestial_power
+
+            # SEVEN LEY LINE AURA - concentric rings of different colors
+            ley_colors = ['#FFD700', '#FF6B35', '#FF1493', '#9400D3', '#00FF7F', '#00BFFF', '#FFFFFF']
+            for i, color in enumerate(ley_colors):
+                ring_radius = s * (2.5 + i * 0.4 + np.sin(frame * 0.05 + i) * 0.2)
+                ring = patches.Circle(
+                    (x, y), ring_radius,
+                    fill=False, edgecolor=color, linewidth=3 - i * 0.3,
+                    alpha=power * 0.4 * (1 - i * 0.1), zorder=6
+                )
+                ax.add_patch(ring)
+
+            # MASSIVE GOLDEN AURA - the power of ten thousand years
+            for i in range(8):
+                aura_size = s * (2 + i * 0.5 + np.sin(frame * 0.06 + i * 0.5) * 0.3)
+                aura = patches.Circle(
+                    (x, y), aura_size,
+                    color='#FFD700', alpha=power * 0.12 * (1 - i * 0.1), zorder=5
+                )
+                ax.add_patch(aura)
+
+            # WINGS OF PURE LIGHT - ethereal, flowing with cosmic energy
+            for side in [-1, 1]:
+                wing_spread = s * 2.5 * power
+                wing_flap = np.sin(self.wing_phase) * 20
+
+                # Main wing structure - multiple layered feathers of light
+                for feather in range(7):
+                    feather_angle = (side * 45 + wing_flap + feather * side * 12) * np.pi / 180
+                    feather_length = wing_spread * (1 - feather * 0.08)
+                    feather_width = s * 0.4 * (1 - feather * 0.05)
+
+                    fx = x + side * s * 0.5 + np.cos(feather_angle) * feather_length * 0.5
+                    fy = y + s * 0.3 + np.sin(feather_angle) * feather_length * 0.3
+
+                    # Feather glow
+                    feather_glow = patches.Ellipse(
+                        (fx, fy), feather_length, feather_width,
+                        angle=np.degrees(feather_angle) + 90,
+                        color='#FFD700', alpha=power * 0.3 * (1 - feather * 0.04), zorder=7
+                    )
+                    ax.add_patch(feather_glow)
+
+                    # Bright feather core
+                    feather_core = patches.Ellipse(
+                        (fx, fy), feather_length * 0.6, feather_width * 0.5,
+                        angle=np.degrees(feather_angle) + 90,
+                        color='#FFFFFF', alpha=power * 0.5 * (1 - feather * 0.06), zorder=8
+                    )
+                    ax.add_patch(feather_core)
+
+            # COSMIC SPARKLES emanating from her form
+            for i in range(20):
+                angle = (frame * 0.03 + i * 0.314) % (2 * np.pi)
+                dist = s * (1.5 + np.sin(frame * 0.05 + i) * 0.5 + i * 0.15)
+                sparkle_x = x + np.cos(angle) * dist
+                sparkle_y = y + np.sin(angle) * dist * 0.7
+                sparkle_size = 15 + 10 * np.sin(frame * 0.1 + i)
+                ax.scatter([sparkle_x], [sparkle_y], c='#FFD700',
+                          s=sparkle_size * power, alpha=power * 0.8, zorder=30)
+
+            # GOLDEN FLAMES at her feet - the power of the ley lines
+            for i in range(12):
+                flame_x = x + (i - 6) * s * 0.2 + np.sin(frame * 0.15 + i) * s * 0.1
+                flame_height = s * (0.5 + 0.3 * np.sin(frame * 0.2 + i * 0.5))
+                flame_y = y - s * 0.6 + flame_height * 0.3
+                flame = patches.Polygon([
+                    [flame_x - s * 0.1, y - s * 0.7],
+                    [flame_x, y - s * 0.7 + flame_height],
+                    [flame_x + s * 0.1, y - s * 0.7],
+                ], color='#FFD700', alpha=power * 0.6, zorder=4)
+                ax.add_patch(flame)
+
+            # Eyes glow with cosmic power when in celestial form
+            for side in [-1, 1]:
+                eye_x = x + side * s * 0.35
+                eye_y_cosmic = y + s * 0.35
+                for i in range(3):
+                    eye_glow = patches.Circle(
+                        (eye_x, eye_y_cosmic), s * (0.2 + i * 0.1),
+                        color='#00BFFF', alpha=power * 0.4 * (1 - i * 0.25), zorder=50
+                    )
+                    ax.add_patch(eye_glow)
+
         self.render_speech(ax)
 
 
 class MajesticHorse(Character):
-    """A Majestic Horse for the Dangerous Ride - powerful and dramatic"""
+    """Thunder - The Celestial Steed, Guardian of Huuters
+
+    An ETERNAL SPIRIT made flesh, the physical manifestation of COURAGE and LOYALTY.
+    Created by the Starborn alongside Huuters, Thunder has guarded the sanctuary
+    for millennia. His dark coat contains the VOID BETWEEN STARS. His mane flows
+    with the WINDS OF ETERNITY. His hooves strike with the force of COLLIDING GALAXIES.
+
+    Thunder can only be ridden by those whose hearts are ABSOLUTELY PURE and
+    whose love is ABSOLUTELY TRUE. He has waited ten thousand years for riders
+    worthy of his back. His tears become shooting stars.
+
+    When in cosmic_form, Thunder reveals his true nature: starlight traces his
+    form, his hooves leave trails of galaxies, and he can run between dimensions."""
 
     def __init__(self, x: float, y: float, scale: float = 2.0):
         super().__init__(x, y, scale, "Thunder")
@@ -2832,9 +3045,13 @@ class MajesticHorse(Character):
         self.mane_flow = 0
         self.is_galloping = False
         self.speed = 0
-        self.body_color = '#2F1810'  # Dark brown, almost black
-        self.mane_color = '#1a0a05'  # Flowing black mane
-        self.eye_color = '#8B4513'  # Warm brown eyes
+        self.body_color = '#2F1810'  # Dark brown - contains the VOID BETWEEN STARS
+        self.mane_color = '#1a0a05'  # Flowing black mane - WINDS OF ETERNITY
+        self.eye_color = '#8B4513'  # Warm brown eyes - ancient wisdom
+        # Cosmic form properties
+        self.cosmic_form = False
+        self.cosmic_power = 0.0  # 0-1, how much celestial power is visible
+        self.tears_of_joy = False  # When worthy riders mount him
 
     def render(self, ax, frame: int):
         if self.alpha <= 0:
@@ -3040,6 +3257,104 @@ class MajesticHorse(Character):
                     color='white', alpha=0.4, zorder=25
                 )
                 ax.add_patch(snort)
+
+        # ═══════════════════════════════════════════════════════════════════
+        # COSMIC FORM - Thunder's true celestial nature revealed!
+        # His coat shows the VOID BETWEEN STARS, his hooves leave galaxy trails,
+        # and he runs between dimensions themselves.
+        # ═══════════════════════════════════════════════════════════════════
+        if self.cosmic_form:
+            power = self.cosmic_power
+
+            # STARLIGHT AURA - the void between stars made visible
+            for i in range(6):
+                aura_size = s * (3.5 + i * 0.6 + np.sin(frame * 0.04 + i) * 0.3)
+                aura = patches.Ellipse(
+                    (x, y), aura_size * 1.5, aura_size,
+                    color='#4B0082', alpha=power * 0.1 * (1 - i * 0.12), zorder=3
+                )
+                ax.add_patch(aura)
+
+            # CONSTELLATION PATTERNS on his coat - stars within the void
+            np.random.seed(42)  # Consistent constellation pattern
+            for i in range(30):
+                star_x = x + (np.random.rand() - 0.5) * s * 3
+                star_y = y + (np.random.rand() - 0.5) * s * 2
+                star_twinkle = 0.5 + 0.5 * np.sin(frame * 0.1 + i * 0.7)
+                star_size = (5 + np.random.rand() * 10) * star_twinkle
+                ax.scatter([star_x], [star_y], c='white',
+                          s=star_size * power, alpha=power * 0.8, zorder=26)
+
+            # GALAXY TRAIL from hooves when galloping
+            if self.is_galloping:
+                for leg_i in range(4):
+                    trail_x = x + (leg_i - 1.5) * s * 0.5 - self.speed * s * 0.1
+                    trail_y = y - s * 1.3
+                    for t in range(8):
+                        galaxy_x = trail_x - t * s * 0.15 - self.mane_flow * 0.02 * t
+                        galaxy_y = trail_y + np.sin(frame * 0.1 + t * 0.5 + leg_i) * s * 0.1
+                        galaxy_size = s * (0.15 - t * 0.015)
+                        # Spiral galaxy effect
+                        galaxy = patches.Circle(
+                            (galaxy_x, galaxy_y), galaxy_size,
+                            color='#9400D3', alpha=power * 0.5 * (1 - t * 0.1), zorder=2
+                        )
+                        ax.add_patch(galaxy)
+                        # Galaxy core
+                        core = patches.Circle(
+                            (galaxy_x, galaxy_y), galaxy_size * 0.3,
+                            color='#FFD700', alpha=power * 0.7 * (1 - t * 0.1), zorder=3
+                        )
+                        ax.add_patch(core)
+
+            # MANE OF ETERNAL WINDS - flowing with cosmic energy
+            for i in range(8):
+                mane_trail_x = x + s * (0.8 - i * 0.1) - self.mane_flow * 0.04 * s
+                mane_trail_y = y + s * (1.0 + i * 0.08)
+                cosmic_strand = patches.Ellipse(
+                    (mane_trail_x, mane_trail_y),
+                    s * 0.3, s * (0.6 - i * 0.05),
+                    angle=-30 - self.mane_flow * 0.5,
+                    color='#00BFFF', alpha=power * 0.4 * (1 - i * 0.1), zorder=25
+                )
+                ax.add_patch(cosmic_strand)
+
+            # EYES GLOW with ancient wisdom when cosmic
+            eye_x_cosmic = head_x + s * 0.1
+            eye_y_cosmic = head_y + s * 0.1
+            for i in range(4):
+                eye_cosmic_glow = patches.Circle(
+                    (eye_x_cosmic, eye_y_cosmic), s * (0.15 + i * 0.08),
+                    color='#FFD700', alpha=power * 0.4 * (1 - i * 0.2), zorder=50
+                )
+                ax.add_patch(eye_cosmic_glow)
+
+            # DIMENSIONAL RIPPLES around hooves
+            for leg_i in range(4):
+                ripple_x = x + (leg_i - 1.5) * s * 0.5
+                ripple_y = y - s * 1.4
+                for r in range(3):
+                    ripple = patches.Circle(
+                        (ripple_x, ripple_y), s * (0.3 + r * 0.15 + (frame * 0.05) % 0.3),
+                        fill=False, edgecolor='#9400D3', linewidth=2,
+                        alpha=power * 0.3 * (1 - r * 0.25), zorder=1
+                    )
+                    ax.add_patch(ripple)
+
+        # TEARS OF JOY - shooting stars when worthy riders mount
+        if self.tears_of_joy:
+            for i in range(5):
+                tear_x = head_x + s * 0.15 + (frame * 3 + i * 30) % (WIDTH * 0.5)
+                tear_y = head_y + s * 0.05 - (frame * 2 + i * 20) % (HEIGHT * 0.3)
+                # Shooting star trail
+                for t in range(6):
+                    trail_x = tear_x - t * 15
+                    trail_y = tear_y + t * 10
+                    trail = patches.Circle(
+                        (trail_x, trail_y), 3 - t * 0.4,
+                        color='#FFD700', alpha=0.8 - t * 0.12, zorder=100
+                    )
+                    ax.add_patch(trail)
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -3721,11 +4036,29 @@ class CastleEnvironment(Environment):
 
 
 class HuutersRestaurantEnvironment(Environment):
-    """The Mysterious Huuters Restaurant - an otherworldly establishment
-    that appears in the mist between worlds. Atmospheric, enigmatic, alluring."""
+    """The Mysterious Huuters - Sacred Sanctuary of the Starborn
+
+    Built upon the convergence of SEVEN SACRED LEY LINES - the most powerful
+    magical nexus in all existence. The very ground pulses with ancient power.
+    The walls shimmer between dimensions. Time moves differently within
+    its hallowed walls.
+
+    The name "HUUTERS" is an ancient Starborn word meaning "WHERE SOULS INTERTWINE."
+    Those who enter seeking comfort find it. Those who enter seeking love...
+    find their DESTINY."""
 
     def __init__(self):
         super().__init__()
+        # The SEVEN SACRED LEY LINES - colors of cosmic power
+        self.ley_line_colors = [
+            '#FFD700',  # Gold - Love
+            '#FF6B35',  # Orange - Courage
+            '#FF1493',  # Pink - Passion
+            '#9400D3',  # Purple - Mystery
+            '#00FF7F',  # Green - Life
+            '#00BFFF',  # Cyan - Wisdom
+            '#FFFFFF',  # White - Purity
+        ]
         # Flickering candle positions
         self.candles = [
             {'x': WIDTH * 0.15, 'y': HEIGHT * 0.35, 'phase': 0},
@@ -3744,6 +4077,60 @@ class HuutersRestaurantEnvironment(Environment):
     def render_background(self, ax, frame: int, lighting: LightingSystem):
         # Deep, mysterious purple-black background
         ax.set_facecolor('#0a0510')
+
+        # ═══════════════════════════════════════════════════════════════════
+        # THE SEVEN SACRED LEY LINES - pulsing beneath the sanctuary
+        # The convergence point is directly beneath Huuters!
+        # ═══════════════════════════════════════════════════════════════════
+        convergence_x = WIDTH * 0.5
+        convergence_y = HEIGHT * 0.15
+
+        # Ley lines radiating from beneath the building
+        for i, color in enumerate(self.ley_line_colors):
+            # Each ley line comes from a different direction
+            angle = (i / 7) * 2 * np.pi + frame * 0.002
+            start_x = convergence_x + np.cos(angle) * WIDTH * 0.8
+            start_y = convergence_y + np.sin(angle) * HEIGHT * 0.4
+
+            # Pulsing energy along the ley line
+            pulse = 0.5 + 0.5 * np.sin(frame * 0.03 + i * 0.9)
+
+            # Draw the ley line as a glowing path
+            for w in range(5):
+                line_width = (6 - w) * 2
+                line_alpha = 0.15 * pulse * (1 - w * 0.15)
+                ax.plot([start_x, convergence_x], [start_y, convergence_y],
+                       color=color, linewidth=line_width, alpha=line_alpha, zorder=0)
+
+            # Energy nodes along the ley line
+            for node in range(5):
+                t = node / 5
+                node_x = start_x + (convergence_x - start_x) * t
+                node_y = start_y + (convergence_y - start_y) * t
+                node_pulse = 0.5 + 0.5 * np.sin(frame * 0.05 + i + node * 0.5)
+                node_size = 8 + 6 * node_pulse
+                ax.scatter([node_x], [node_y], c=color,
+                          s=node_size * pulse, alpha=0.6 * pulse, zorder=0)
+
+        # Convergence point GLOWS with combined power
+        for i in range(8):
+            convergence_glow = patches.Circle(
+                (convergence_x, convergence_y), 30 + i * 15 + np.sin(frame * 0.04) * 10,
+                color='#FFD700', alpha=0.08 * (1 - i * 0.1), zorder=0
+            )
+            ax.add_patch(convergence_glow)
+
+        # Dimensional shimmer effect - the walls between worlds are thin here
+        for i in range(10):
+            shimmer_x = np.random.uniform(WIDTH * 0.1, WIDTH * 0.9)
+            shimmer_y = np.random.uniform(HEIGHT * 0.3, HEIGHT * 0.7)
+            shimmer_phase = frame * 0.02 + i * 0.628
+            if np.sin(shimmer_phase) > 0.8:  # Occasional dimensional flicker
+                shimmer = patches.Circle(
+                    (shimmer_x, shimmer_y), 20 + np.random.rand() * 30,
+                    color=self.ley_line_colors[i % 7], alpha=0.15, zorder=1
+                )
+                ax.add_patch(shimmer)
 
         # Swirling mist in the background (ethereal)
         for i in range(15):
@@ -4175,7 +4562,7 @@ class HuutersDiscoveryScene(Scene):
                 )
                 ax.add_patch(fog)
 
-            # Eli walking, looking lost
+            # Eli walking, looking lost - separated from allies after Storm Heron
             eli_x = WIDTH * (0.2 + mist_p * 0.15)
             eli = Frog(eli_x, HEIGHT * 0.2, 1.0)
             eli.emotion = Emotion.SAD
@@ -4184,12 +4571,38 @@ class HuutersDiscoveryScene(Scene):
             # Subtle dust motes in the mist
             ctx['lighting'].render_dust_motes(ax, frame, 0.4)
 
-            # "Lost in the mist..." text
-            if mist_p > 0.3:
-                text_alpha = (mist_p - 0.3) / 0.7
+            # NARRATIVE CONTEXT - Why is Eli here?
+            # After the Storm Heron battle, he was separated from his allies
+            # Something draws him through the mist - the prophecy's pull
+            if mist_p < 0.3:
+                context_alpha = 1 - mist_p / 0.3
+                ax.text(WIDTH/2, HEIGHT * 0.88,
+                       "After the battle with the Storm Heron...",
+                       fontsize=22, ha='center', color='#7777aa',
+                       alpha=context_alpha, style='italic', zorder=100)
+                ax.text(WIDTH/2, HEIGHT * 0.82,
+                       "Eli was separated from his allies.",
+                       fontsize=20, ha='center', color='#6666aa',
+                       alpha=context_alpha, style='italic', zorder=100)
+
+            # Main emotional text
+            if mist_p > 0.3 and mist_p < 0.7:
+                text_alpha = (mist_p - 0.3) / 0.4
                 ax.text(WIDTH/2, HEIGHT * 0.8, "Lost... alone...",
                        fontsize=28, ha='center', color='#9999aa',
                        alpha=text_alpha, style='italic', zorder=100)
+
+            # The prophecy's pull
+            if mist_p > 0.6:
+                pull_alpha = (mist_p - 0.6) / 0.4
+                ax.text(WIDTH/2, HEIGHT * 0.72,
+                       "But something called to him through the mist...",
+                       fontsize=22, ha='center', color='#aaaacc',
+                       alpha=pull_alpha, style='italic', zorder=100)
+                ax.text(WIDTH/2, HEIGHT * 0.66,
+                       '"Where seven ley lines meet..."',
+                       fontsize=20, ha='center', color='#FFD700',
+                       alpha=pull_alpha * 0.7, style='italic', zorder=100)
 
             # Heavy vignette for isolated feeling
             ctx['lighting'].render_vignette(ax, 0.5 + mist_p * 0.2, color='#0a0510')
@@ -4816,10 +5229,13 @@ class DangerousHorseRideScene(Scene):
                 ax.add_patch(shape)
 
             # Horse and riders barreling through
+            # THUNDER ACTIVATES COSMIC FORM - he can run between dimensions!
             self.horse.x = WIDTH * 0.45
             self.horse.y = HEIGHT * 0.32 + np.sin(local * 0.2) * 20
             self.horse.is_galloping = True
             self.horse.speed = 25
+            self.horse.cosmic_form = True  # THUNDER REVEALS HIS TRUE NATURE!
+            self.horse.cosmic_power = rift_p  # Power increases as rifts intensify
             self.horse.render(ax, local)
 
             eli = Frog(WIDTH * 0.43, HEIGHT * 0.54 + np.sin(local * 0.2) * 20, 0.8)
@@ -4829,6 +5245,13 @@ class DangerousHorseRideScene(Scene):
             bella = Waitress(WIDTH * 0.49, HEIGHT * 0.52 + np.sin(local * 0.2) * 20, 0.75)
             bella.emotion = Emotion.SCARED
             bella.render(ax, local)
+
+            # Thunder speaks to their minds (ancient wisdom)
+            if rift_p > 0.3 and rift_p < 0.6:
+                thunder_text_alpha = (rift_p - 0.3) / 0.3
+                ax.text(WIDTH/2, HEIGHT * 0.92, '"HOLD FAST! I HAVE RUN BETWEEN WORLDS BEFORE!"',
+                       fontsize=22, ha='center', color='#00BFFF',
+                       alpha=thunder_text_alpha, style='italic', zorder=100)
 
             # "WHAT'S HAPPENING?!" text
             ax.text(WIDTH/2, HEIGHT * 0.85, "REALITY IS TEARING APART!",
@@ -4918,15 +5341,46 @@ class DangerousHorseRideScene(Scene):
             eli.emotion = Emotion.SCARED
             eli.render(ax, local)
 
+            # BELLA REVEALS HER TRUE STARBORN NATURE TO PROTECT ELI!
             bella = Waitress(horse_x + 30, HEIGHT * 0.55 + jump_height, 0.75)
-            bella.emotion = Emotion.SCARED
+
+            # As danger peaks, Bella's celestial form awakens!
+            if bridge_p > 0.4:
+                bella.celestial_form = True
+                bella.celestial_power = min(1.0, (bridge_p - 0.4) * 2.5)  # Power surges!
+                bella.emotion = Emotion.DETERMINED  # No longer scared - protecting her love!
+            else:
+                bella.emotion = Emotion.SCARED
             bella.render(ax, local)
 
-            # Bella's dialogue - dramatic moment
-            if bridge_p > 0.5 and bridge_p < 0.8:
-                ax.text(WIDTH/2, HEIGHT * 0.8, "\"I WON'T LET YOU FALL!\"",
+            # Bella's dialogue - THE MOMENT SHE REVEALS HER POWER!
+            if bridge_p > 0.5 and bridge_p < 0.7:
+                ax.text(WIDTH/2, HEIGHT * 0.8, '"I WON\'T LET YOU FALL!"',
                        fontsize=28, fontweight='bold', ha='center',
                        color='#FFD700', alpha=(bridge_p - 0.5) * 3, zorder=100)
+
+            # Bella reveals her true nature!
+            if bridge_p > 0.7:
+                reveal_alpha = (bridge_p - 0.7) / 0.3
+                ax.text(WIDTH/2, HEIGHT * 0.88,
+                       '"I AM BELLA, LAST OF THE STARBORN!"',
+                       fontsize=24, ha='center', color='#00BFFF',
+                       alpha=reveal_alpha, style='italic', zorder=100)
+                ax.text(WIDTH/2, HEIGHT * 0.82,
+                       '"FOR TEN THOUSAND YEARS I WAITED FOR YOU!"',
+                       fontsize=20, ha='center', color='#FFD700',
+                       alpha=reveal_alpha * 0.8, style='italic', zorder=100)
+
+            # The ley lines respond to Bella's awakening - golden energy pulses!
+            if bridge_p > 0.5:
+                ley_pulse = bridge_p - 0.5
+                for i in range(7):
+                    ley_angle = (i / 7) * 2 * np.pi + local * 0.01
+                    ley_x = horse_x + 30 + np.cos(ley_angle) * 150 * ley_pulse
+                    ley_y = HEIGHT * 0.55 + jump_height + np.sin(ley_angle) * 100 * ley_pulse
+                    ley_colors = ['#FFD700', '#FF6B35', '#FF1493', '#9400D3', '#00FF7F', '#00BFFF', '#FFFFFF']
+                    ax.scatter([ley_x], [ley_y], c=ley_colors[i],
+                              s=30 * ley_pulse * 2, alpha=0.7 * ley_pulse, zorder=50)
 
             # Rocks falling
             for i in range(8):
@@ -5620,6 +6074,26 @@ class WeddingScene(Scene):
         # Sage officiating
         sage = WiseTurtle(WIDTH * 0.5, HEIGHT * 0.38, 1.0)
         sage.render(ax, local)
+
+        # LUNA - Princess and dear friend, serving as bridesmaid!
+        # She stands proudly beside Bella, happy for her friend's love
+        luna = Frog(WIDTH * 0.68, HEIGHT * 0.26, 0.9, 'princess', 'Luna')
+        luna.emotion = Emotion.HAPPY
+        # Luna wears a flower crown for the occasion
+        luna.render(ax, local)
+        # Bridesmaid flower
+        ax.add_patch(patches.Circle((WIDTH * 0.68 - 15, HEIGHT * 0.28), 8,
+                    color='#FF69B4', alpha=0.9, zorder=30))
+
+        # THUNDER - The Celestial Steed watches proudly from the background!
+        # He brought them together through the dangerous ride
+        thunder = MajesticHorse(WIDTH * 0.15, HEIGHT * 0.25, 1.2)
+        thunder.is_galloping = False
+        # Thunder shows gentle cosmic glow at the wedding
+        thunder.cosmic_form = True
+        thunder.cosmic_power = 0.3  # Gentle, not overwhelming
+        thunder.tears_of_joy = True  # He weeps shooting stars of joy!
+        thunder.render(ax, local)
 
         # Spark flying around joyfully
         spark_x = WIDTH * 0.5 + np.sin(local * 0.08) * 150
@@ -6341,6 +6815,7 @@ class ProphecyScene(Scene):
             ax.add_patch(glow_tablet)
 
         # Prophecy text appearing letter by letter
+        # THE COMPLETE PROPHECY - includes foreshadowing of HUUTERS!
         prophecy_lines = [
             "When darkness rises from the deep,",
             "And shadows make the brave men weep,",
@@ -6350,7 +6825,15 @@ class ProphecyScene(Scene):
             "The Emerald Guardian shall arise,",
             "With courage true and ancient eyes,",
             "To vanquish evil, restore the light,",
-            "And bring an end to endless night."
+            "And bring an end to endless night.",
+            "",
+            "But first, where seven ley lines meet,",  # HUUTERS FORESHADOWING!
+            "A sanctuary his soul shall greet,",      # The sacred restaurant
+            "The Last Starborn waits within,",        # BELLA!
+            "Their love, the key that lets light in.", # Their cosmic love
+            "",
+            "Through fire and void, on celestial steed,",  # THUNDER!
+            "Their bond shall prove the final deed.",       # The dangerous ride
         ]
 
         chars_per_frame = 0.8
@@ -7194,15 +7677,31 @@ def build_scenes() -> List[Scene]:
     hero.emotion = Emotion.HAPPY
     hero.set_glow(True, '#FFD700', 0.3)
     s.add_char(hero)
-    # Bella beside him - their love forged through the dangerous horse ride
+    # Bella beside him - the Last of the Starborn, now Queen
+    # Her celestial nature has merged with her mortal form - eternally radiant
     bella_end = Waitress(WIDTH * 0.65, HEIGHT * 0.22, 1.1)
     bella_end.emotion = Emotion.LOVE
+    bella_end.celestial_form = True  # She's always slightly radiant now
+    bella_end.celestial_power = 0.25  # Gentle, eternal glow
     s.add_char(bella_end)
-    # Little froglets (Eli and Bella's children!)
+    # Little froglets (Eli and Bella's children - HALF STARBORN!)
+    # The children inherit some of Bella's cosmic nature
     for i in range(3):
         child = Frog(WIDTH * (0.35 + i * 0.08), HEIGHT * 0.18, 0.4)
         child.emotion = Emotion.HAPPY
+        child.set_glow(True, '#FFD700', 0.15)  # Children have faint glow
         s.add_char(child)
+    # THUNDER - The Celestial Steed, now the family's eternal guardian
+    # He watches over them from nearby, his duty fulfilled but his loyalty eternal
+    thunder_end = MajesticHorse(WIDTH * 0.12, HEIGHT * 0.28, 1.0)
+    thunder_end.is_galloping = False
+    thunder_end.cosmic_form = True
+    thunder_end.cosmic_power = 0.4  # Peaceful but present
+    s.add_char(thunder_end)
+    # Luna visits often as a dear friend
+    luna_visits = Frog(WIDTH * 0.82, HEIGHT * 0.2, 0.8, 'princess', 'Luna')
+    luna_visits.emotion = Emotion.HAPPY
+    s.add_char(luna_visits)
     scenes.append(s)
 
     # ═══════════════════════════════════════════════════════════════════════════
