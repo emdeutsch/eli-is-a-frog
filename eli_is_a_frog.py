@@ -4984,6 +4984,11 @@ class DangerousHorseRideScene(Scene):
         p = self.progress(frame)
         local = frame - self.start
 
+        # Reset horse cosmic form at start of each frame - only enable in specific phases
+        self.horse.cosmic_form = False
+        self.horse.cosmic_power = 0.0
+        self.horse.tears_of_joy = False
+
         # CONSTANT INTENSE CAMERA SHAKE - increases with danger
         self.danger_level = 0.3 + p * 0.7
         self.shake_intensity = 5 + self.danger_level * 20
@@ -5072,11 +5077,14 @@ class DangerousHorseRideScene(Scene):
                 )
                 ax.add_patch(cloud)
 
-            # The horse dramatically appears
+            # The horse dramatically appears - THUNDER, THE CELESTIAL STEED!
             horse_x = WIDTH * (0.7 - mount_p * 0.2)
             self.horse.x = horse_x
             self.horse.y = HEIGHT * 0.35
             self.horse.is_galloping = False
+            # Thunder WEEPS with joy - he has waited 10,000 years for worthy riders!
+            if mount_p > 0.5:
+                self.horse.tears_of_joy = True
             self.horse.render(ax, local)
 
             # Eli and Bella mounting
@@ -5456,12 +5464,15 @@ class DangerousHorseRideScene(Scene):
             )
             ax.add_patch(chasm)
 
-            # Horse in mid-leap
+            # Horse in mid-leap - THUNDER IN FULL COSMIC GLORY!
             horse_x = WIDTH * (0.35 + leap_p * 0.35)
             self.horse.x = horse_x
             self.horse.y = HEIGHT * 0.25 + leap_height
             self.horse.is_galloping = True
             self.horse.speed = 35
+            # Thunder channels cosmic power for the impossible leap!
+            self.horse.cosmic_form = True
+            self.horse.cosmic_power = leap_arc  # Power peaks at apex of jump
             self.horse.render(ax, local)
 
             eli = Frog(horse_x - 10, HEIGHT * 0.47 + leap_height, 0.8)
