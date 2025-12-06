@@ -1643,6 +1643,122 @@ class LightingSystem:
                                    zorder=955)
         ax.add_patch(streak)
 
+    def render_film_grain(self, ax, frame: int, intensity: float = 0.03):
+        """Render subtle film grain for cinematic texture"""
+        if intensity < 0.005:
+            return
+
+        # Create deterministic but varied grain pattern
+        np.random.seed(frame % 1000)  # Changes each frame for animated grain
+
+        # Sparse grain dots for efficiency
+        num_grains = int(150 * intensity * 10)
+        for _ in range(num_grains):
+            gx = np.random.uniform(0, WIDTH)
+            gy = np.random.uniform(0, HEIGHT)
+            grain_alpha = np.random.uniform(0.02, 0.08) * intensity * 10
+            grain_size = np.random.uniform(2, 6)
+            grain_color = np.random.choice(['white', '#888888', 'black'])
+
+            ax.scatter([gx], [gy], c=grain_color, s=grain_size,
+                      alpha=clamp(grain_alpha, 0, 0.1), zorder=970)
+
+    def render_chromatic_aberration(self, ax, frame: int, intensity: float = 0.3):
+        """Render chromatic aberration effect at screen edges for impact moments"""
+        if intensity < 0.05:
+            return
+
+        # Chromatic aberration is strongest at corners/edges
+        # We'll render colored edge overlays
+        offset = intensity * 8
+
+        # Red channel shift (top-left direction)
+        for edge_pos in [(0, HEIGHT), (WIDTH, HEIGHT)]:
+            ax.add_patch(patches.Rectangle(
+                (edge_pos[0] - 50, edge_pos[1] - 50), 100, 100,
+                facecolor='#FF0000', alpha=clamp(intensity * 0.15, 0, 0.2),
+                zorder=965
+            ))
+
+        # Cyan channel shift (bottom-right direction)
+        for edge_pos in [(0, 0), (WIDTH, 0)]:
+            ax.add_patch(patches.Rectangle(
+                (edge_pos[0] - 50, edge_pos[1] - 50), 100, 100,
+                facecolor='#00FFFF', alpha=clamp(intensity * 0.15, 0, 0.2),
+                zorder=965
+            ))
+
+        # Edge color fringing
+        edge_width = 30 * intensity
+        # Left edge - red tint
+        ax.add_patch(patches.Rectangle(
+            (0, 0), edge_width, HEIGHT,
+            facecolor='#FF0000', alpha=clamp(intensity * 0.1, 0, 0.15),
+            zorder=964
+        ))
+        # Right edge - cyan tint
+        ax.add_patch(patches.Rectangle(
+            (WIDTH - edge_width, 0), edge_width, HEIGHT,
+            facecolor='#00FFFF', alpha=clamp(intensity * 0.1, 0, 0.15),
+            zorder=964
+        ))
+
+    def render_dust_motes(self, ax, frame: int, density: float = 1.0):
+        """Render floating dust particles for atmospheric depth"""
+        if density < 0.1:
+            return
+
+        np.random.seed(42)  # Consistent positions
+        num_motes = int(25 * density)
+
+        for i in range(num_motes):
+            # Each mote has its own floating pattern
+            base_x = np.random.uniform(0, WIDTH)
+            base_y = np.random.uniform(HEIGHT * 0.3, HEIGHT)
+
+            # Gentle floating motion
+            float_x = np.sin(frame * 0.008 + i * 2.5) * 30
+            float_y = np.sin(frame * 0.012 + i * 1.7) * 20 + (frame * 0.1) % HEIGHT
+
+            mote_x = (base_x + float_x) % WIDTH
+            mote_y = (base_y + float_y) % (HEIGHT * 0.7) + HEIGHT * 0.3
+
+            # Size varies with "depth"
+            depth = (i % 5) / 5
+            size = 3 + depth * 8
+            alpha = 0.1 + depth * 0.2
+
+            # Slight twinkle
+            twinkle = 0.8 + 0.2 * np.sin(frame * 0.1 + i)
+
+            ax.scatter([mote_x], [mote_y], c='white', s=size * twinkle,
+                      alpha=clamp(alpha * density, 0.05, 0.4), zorder=100)
+
+    def render_bloom(self, ax, frame: int, source_x: float, source_y: float,
+                    radius: float = 100, color: str = '#FFFFFF', intensity: float = 0.5):
+        """Render bloom/glow effect around bright light sources"""
+        if intensity < 0.05:
+            return
+
+        # Parse color
+        r = int(color.lstrip('#')[0:2], 16) / 255
+        g = int(color.lstrip('#')[2:4], 16) / 255
+        b = int(color.lstrip('#')[4:6], 16) / 255
+
+        # Multiple soft layers for smooth bloom
+        num_layers = 8
+        for i in range(num_layers):
+            layer_radius = radius * (1 + i * 0.5)
+            layer_alpha = intensity * (1 - i / num_layers) ** 2 * 0.15
+
+            # Pulsing bloom
+            pulse = 1 + 0.1 * np.sin(frame * 0.05 + i * 0.5)
+
+            bloom = patches.Circle((source_x, source_y), layer_radius * pulse,
+                                   facecolor=(r, g, b, clamp(layer_alpha, 0, 0.2)),
+                                   edgecolor='none', zorder=80)
+            ax.add_patch(bloom)
+
 
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
 # ║                         CHARACTER SYSTEM                                      ║
@@ -3269,6 +3385,20 @@ class TitleScene(Scene):
             emit_y = HEIGHT * 0.55 + np.sin(emit_angle) * 40
             ctx['particles'].emit_magic(emit_x, emit_y, 'gold', 0.5)
 
+        # CINEMATIC EFFECTS - floating dust motes for magical atmosphere
+        ctx['lighting'].render_dust_motes(ax, frame, 0.8)
+
+        # Subtle film grain for cinematic quality
+        ctx['lighting'].render_film_grain(ax, frame, 0.015)
+
+        # Vignette for focus on title
+        ctx['lighting'].render_vignette(ax, 0.35)
+
+        # Bloom around the title for magical glow
+        if p > 0.2:
+            ctx['lighting'].render_bloom(ax, frame, WIDTH/2, HEIGHT * 0.6, 150,
+                                        color='#00FF00', intensity=0.3)
+
 
 class ChapterScene(Scene):
     """Chapter title card with smooth transitions"""
@@ -3526,6 +3656,19 @@ class BattleScene(Scene):
         vignette_intensity = 0.3 if not self.slowmo_triggered else 0.6
         ctx['lighting'].render_vignette(ax, vignette_intensity)
 
+        # CHROMATIC ABERRATION on big impacts
+        if 0.84 < p < 0.88:
+            impact_intensity = 1 - abs(p - 0.86) / 0.02
+            ctx['lighting'].render_chromatic_aberration(ax, frame, impact_intensity * 0.5)
+
+        # Bloom around hero's power glow
+        if p > 0.5:
+            ctx['lighting'].render_bloom(ax, frame, hero_x, hero_y, 80,
+                                        color='#00FF7F', intensity=(p - 0.5) * 0.8)
+
+        # Film grain for cinematic texture
+        ctx['lighting'].render_film_grain(ax, frame, 0.02)
+
         # Health bars with pulsing effect when low
         boss_hp = max(0, 100 - p * 105)
         pulse = 1.0 if boss_hp > 20 else 1.0 + np.sin(local * 0.3) * 0.1
@@ -3680,6 +3823,20 @@ class HeroicRiseScene(Scene):
         # Vignette throughout - darkness at edges focuses attention on Eli
         vignette_strength = 0.5 if p < 0.65 else max(0.2, 0.5 - (p - 0.65) * 1.5)
         ctx['lighting'].render_vignette(ax, vignette_strength)
+
+        # CHROMATIC ABERRATION during the power surge (THE RISE phase)
+        if 0.7 < p < 0.85:
+            surge_intensity = 1 - abs(p - 0.775) / 0.075
+            ctx['lighting'].render_chromatic_aberration(ax, frame, surge_intensity * 0.4)
+
+        # Film grain for cinematic texture
+        ctx['lighting'].render_film_grain(ax, frame, 0.025)
+
+        # Bloom during power phases
+        if p > 0.65:
+            bloom_intensity = min(1, (p - 0.65) * 3)
+            ctx['lighting'].render_bloom(ax, frame, WIDTH * 0.5, HEIGHT * 0.4, 120,
+                                        color='#00FF7F', intensity=bloom_intensity * 0.5)
 
 
 class WeddingScene(Scene):
