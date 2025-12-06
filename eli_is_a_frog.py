@@ -524,6 +524,7 @@ class ParticleType(Enum):
     EXPLOSION = auto()
     HEAL = auto()
     DARK = auto()
+    SOUL = auto()  # For ethereal soul/spirit effects
 
 
 @dataclass
@@ -3074,20 +3075,21 @@ class TitleScene(Scene):
         # Title with smooth elastic entrance and glow
         if p > 0.08:
             t_prog = Easing.ease_out_elastic(min(1, (p - 0.08) / 0.35))
-            title_y = HEIGHT * 0.62 + (1 - t_prog) * 50  # Slide in from above
+            t_prog_clamped = clamp(t_prog, 0, 1)  # Clamp for alpha safety
+            title_y = HEIGHT * 0.62 + (1 - t_prog_clamped) * 50  # Slide in from above
 
             # Pulsing glow behind title
             glow_pulse = 0.8 + 0.2 * np.sin(local * 0.05)
             for i in range(4):
-                glow_alpha = (0.15 - i * 0.03) * t_prog * glow_pulse
+                glow_alpha = clamp((0.15 - i * 0.03) * t_prog_clamped * glow_pulse, 0, 1)
                 ax.text(WIDTH/2, title_y, "ELI IS A FROG",
-                       fontsize=int(72 * t_prog), fontweight='bold', ha='center', va='center',
+                       fontsize=int(72 * t_prog_clamped), fontweight='bold', ha='center', va='center',
                        color='#00FF00', alpha=glow_alpha, zorder=10)
 
             # Main title
             ax.text(WIDTH/2, title_y, "ELI IS A FROG",
-                   fontsize=int(72 * t_prog), fontweight='bold', ha='center', va='center',
-                   color='#90EE90', alpha=t_prog, zorder=11)
+                   fontsize=int(72 * t_prog_clamped), fontweight='bold', ha='center', va='center',
+                   color='#90EE90', alpha=t_prog_clamped, zorder=11)
 
         # Smooth subtitle fade with slight rise
         if p > 0.32:
@@ -3262,11 +3264,12 @@ class TransformScene(Scene):
         if p > 0.2:
             emerge_p = min(1, (p - 0.2) / 0.5)
             eased_emerge = Easing.ease_out_elastic(emerge_p) if emerge_p < 0.8 else 1.0
+            eased_emerge = clamp(eased_emerge, 0, 1.2)  # Allow slight overshoot for scale
             scale = 0.6 + eased_emerge * 0.8
             frog = Frog(WIDTH/2, HEIGHT/2, scale)
-            frog.alpha = min(1, emerge_p * 1.5)
+            frog.alpha = clamp(emerge_p * 1.5, 0, 1)
             frog.emotion = Emotion.SHOCKED if p < 0.6 else Emotion.POWERFUL
-            glow_intensity = min(1, emerge_p * 1.2)
+            glow_intensity = clamp(emerge_p * 1.2, 0, 1)
             frog.set_glow(True, '#00FF7F', glow_intensity)
             frog.render(ax, local)
 
@@ -3496,8 +3499,8 @@ class ProphecyScene(Scene):
         for i in range(150):
             sx = np.random.uniform(0, WIDTH)
             sy = np.random.uniform(0, HEIGHT)
-            twinkle = 0.3 + 0.7 * np.sin(local * 0.03 + i)
-            ax.scatter([sx], [sy], c='white', s=twinkle * 10, alpha=twinkle * 0.5, zorder=1)
+            twinkle = 0.5 + 0.5 * np.sin(local * 0.03 + i)  # Range [0, 1] - safe for alpha
+            ax.scatter([sx], [sy], c='white', s=twinkle * 10, alpha=clamp(twinkle * 0.5, 0.01, 1), zorder=1)
 
         # Central prophecy tablet
         tablet = patches.FancyBboxPatch(
@@ -3511,12 +3514,13 @@ class ProphecyScene(Scene):
         # Glowing border
         glow_intensity = 0.5 + 0.3 * np.sin(local * 0.05)
         for i in range(3):
+            glow_alpha = clamp(glow_intensity * (0.3 - i * 0.1), 0.01, 1)
             glow_tablet = patches.FancyBboxPatch(
                 (WIDTH * 0.25 - i * 5, HEIGHT * 0.2 - i * 5),
                 WIDTH * 0.5 + i * 10, HEIGHT * 0.6 + i * 10,
                 boxstyle="round,pad=0.02,rounding_size=20",
                 fill=False, edgecolor='#FFD700',
-                linewidth=2, alpha=glow_intensity * (0.3 - i * 0.1), zorder=9
+                linewidth=2, alpha=glow_alpha, zorder=9
             )
             ax.add_patch(glow_tablet)
 
@@ -3560,7 +3564,7 @@ class ProphecyScene(Scene):
             dist = 280 + np.sin(local * 0.02 + i) * 30
             rx = WIDTH * 0.5 + np.cos(angle) * dist
             ry = HEIGHT * 0.5 + np.sin(angle) * dist * 0.5
-            rune_alpha = 0.5 + 0.5 * np.sin(local * 0.05 + i * 0.7)
+            rune_alpha = clamp(0.5 + 0.5 * np.sin(local * 0.05 + i * 0.7), 0.01, 1)
             ax.text(rx, ry, rune, fontsize=35, ha='center', va='center',
                    color='#9370DB', alpha=rune_alpha, zorder=15)
 
