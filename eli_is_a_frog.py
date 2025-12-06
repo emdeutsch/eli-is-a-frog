@@ -187,6 +187,40 @@ THE DANGEROUS RIDE - COSMIC SIGNIFICANCE:
     When they survive, their love becomes COSMICALLY SIGNIFICANT - blessed by
     the universe itself, unbreakable by any force in existence.
 
+THE VOID EMPEROR - THE ULTIMATE EVIL (SEQUEL HOOK):
+    But there is something the Starborn never told Bella. Something even the
+    ancient prophecies dared not speak of directly.
+
+    Long before the Dark One existed, before even the Starborn descended to
+    the mortal realm, there was THE VOID EMPEROR - the primordial darkness,
+    the father of all shadows, the entropy that exists between stars.
+
+    The First Starborn - Bella's ancestor - sacrificed herself to imprison
+    the Void Emperor in a dimensional cage at the edge of reality. For eons,
+    this prison held. But it was always fragile. Always waiting.
+
+    The cage required constant celestial energy to maintain. The Starborn,
+    one by one, gave their lives to reinforce it. Bella is the LAST of them.
+    She has spent ten thousand years NOT just waiting for true love - but
+    FEEDING THE PRISON with her power, keeping it sealed.
+
+    When Bella reveals her full celestial form during the Dangerous Horse
+    Ride - unleashing ALL of her power to protect Eli and destroy the Dark
+    One's forces - she unknowingly drains the prison's power source.
+
+    The cage CRACKS.
+    The Void Emperor stirs.
+    His eye opens in the darkness.
+
+    He whispers across dimensions: "The Starborn thinks she has won...
+    But she has only awakened... THE ETERNAL DARKNESS."
+
+    Eli and Bella's love may be cosmically significant. Their bond may be
+    unbreakable. But they will need EVERY ounce of that power - and more -
+    to face what comes next.
+
+    ELI IS A FROG II: THE VOID AWAKENS
+
 ═══════════════════════════════════════════════════════════════════════════════
 """
 
@@ -6141,17 +6175,54 @@ class CreditsScene(Scene):
         for _ in range(100):
             ax.scatter([np.random.rand() * WIDTH], [np.random.rand() * HEIGHT], c='white', s=np.random.rand() * 12, alpha=0.6)
 
-        credits = [("ELI IS A FROG", 65, '#90EE90'), ("THE LEGEND OF THE EMERALD GUARDIAN", 24, '#FFD700'), ("", 35, 'w'),
-                   ("Directed by", 20, '#888'), ("Claude Code Productions", 28, '#FFD700'), ("", 25, 'w'),
-                   ("Starring", 20, '#888'), ("ELI - The Emerald Guardian", 24, '#32CD32'),
-                   ("SAGE - The Wise Mentor", 22, '#8B4513'), ("SPARK - The Loyal Friend", 22, '#00CED1'),
-                   ("LUNA - The Princess", 22, '#FF69B4'), ("", 25, 'w'),
-                   ("THE SHADOW SERPENT", 22, '#4B0082'), ("THE STORM HERON", 22, '#708090'),
-                   ("THE DARK ONE", 22, '#8B0000'), ("", 30, 'w'),
-                   ("Animation", 20, '#888'), ("Matplotlib Studios", 24, '#87CEEB'), ("", 20, 'w'),
-                   ("Sound", 20, '#888'), ("NumPy Audio", 24, '#87CEEB'), ("", 35, 'w'),
-                   ("A CLAUDE CODE PRODUCTION", 28, '#FFD700'), ("", 25, 'w'),
-                   ("THE END", 45, '#90EE90')]
+        credits = [
+            ("ELI IS A FROG", 65, '#90EE90'),
+            ("THE LEGEND OF THE EMERALD GUARDIAN", 24, '#FFD700'),
+            ("", 35, 'w'),
+            ("Directed by", 20, '#888'),
+            ("Claude Code Productions", 28, '#FFD700'),
+            ("", 25, 'w'),
+            ("Starring", 20, '#888'),
+            ("ELI - The Emerald Guardian", 24, '#32CD32'),
+            ("BELLA - The Last of the Starborn", 22, '#FFD700'),  # Eli's celestial bride
+            ("SAGE - The Wise Mentor", 22, '#8B4513'),
+            ("SPARK - The Loyal Friend", 22, '#00CED1'),
+            ("LUNA - The Princess", 22, '#FF69B4'),
+            ("THUNDER - The Celestial Steed", 22, '#9370DB'),  # The legendary horse
+            ("", 25, 'w'),
+            ("Villains", 20, '#888'),
+            ("THE SHADOW SERPENT", 22, '#4B0082'),
+            ("THE STORM HERON", 22, '#708090'),
+            ("THE DARK ONE", 22, '#8B0000'),
+            ("", 25, 'w'),
+            ("Sacred Locations", 20, '#888'),
+            ("HUUTERS - Where Seven Ley Lines Meet", 22, '#FFD700'),
+            ("THE SACRED GROVE - Ancient Training Ground", 20, '#228B22'),
+            ("MOUNT DESTINY - Site of the Final Battle", 20, '#4169E1'),
+            ("", 30, 'w'),
+            ("Animation", 20, '#888'),
+            ("Matplotlib Studios", 24, '#87CEEB'),
+            ("", 20, 'w'),
+            ("Sound Design", 20, '#888'),
+            ("NumPy Audio Labs", 24, '#87CEEB'),
+            ("", 20, 'w'),
+            ("Celestial Effects", 20, '#888'),
+            ("Ley Line Rendering Division", 22, '#FFD700'),
+            ("Cosmic Form Animation Team", 22, '#9370DB'),
+            ("", 25, 'w'),
+            ("Special Thanks", 20, '#888'),
+            ("The Ancient Starborn Council", 20, '#FFD700'),
+            ("The Spirits of the Seven Ley Lines", 20, '#FF6B35'),
+            ("All the Frogs Who Believed", 20, '#90EE90'),
+            ("", 35, 'w'),
+            ("A CLAUDE CODE PRODUCTION", 28, '#FFD700'),
+            ("", 10, 'w'),
+            ("\"Where love meets destiny, legends are born\"", 18, '#C0C0C0'),
+            ("", 30, 'w'),
+            ("THE END", 45, '#90EE90'),
+            ("", 20, 'w'),
+            ("...or is it?", 16, '#666'),
+        ]
 
         y = -local * 1.0 + HEIGHT * 0.25
         for txt, sz, col in credits:
@@ -6164,6 +6235,192 @@ class CreditsScene(Scene):
             frog.emotion = Emotion.HAPPY
             frog.has_crown = True
             frog.render(ax, local)
+
+
+class PostCreditsScene(Scene):
+    """
+    POST-CREDITS STINGER - THE SEQUEL TEASE
+
+    After the credits roll, the screen goes dark...
+    Then a mysterious scene hints at greater threats to come!
+
+    Deep in the void between dimensions, something stirs.
+    A single glowing eye opens in the darkness.
+    A voice echoes: "The Starborn thinks she has won...
+    But she has only awakened... THE ETERNAL DARKNESS."
+
+    The eye belongs to something FAR more ancient and terrible
+    than the Dark One ever was - THE VOID EMPEROR, father of all shadows,
+    imprisoned since the dawn of time by the First Starborn.
+
+    And now... Bella's use of her full celestial power during
+    the Dangerous Horse Ride has cracked his prison.
+
+    ELI IS A FROG 2: THE VOID AWAKENS - Coming Soon
+    """
+
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+
+        # Pure darkness
+        ax.set_facecolor('#000000')
+
+        # Phase 1: Complete darkness with rumbling (0-20%)
+        if p < 0.2:
+            # Occasional deep rumble effect (dark purple flicker)
+            if local % 40 < 2:
+                ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT,
+                            color='#0a0005', alpha=0.5, zorder=1))
+                ctx['camera'].shake(3, 0.95)
+
+        # Phase 2: A crack appears in the void (20-40%)
+        elif p < 0.4:
+            crack_p = (p - 0.2) / 0.2
+
+            # Dimensional crack forming
+            crack_x = WIDTH / 2
+            crack_y = HEIGHT / 2
+            crack_length = crack_p * 300
+            crack_width = crack_p * 5
+
+            # Jagged crack with purple energy
+            for i in range(int(crack_p * 20)):
+                offset_x = np.sin(i * 0.7) * 30
+                y_pos = crack_y - crack_length/2 + (i / 20) * crack_length
+                ax.plot([crack_x + offset_x - crack_width, crack_x + offset_x + crack_width],
+                       [y_pos, y_pos], color='#4B0082', linewidth=2, alpha=crack_p, zorder=10)
+
+            # Purple glow from crack
+            glow = patches.Circle((crack_x, crack_y), 50 * crack_p,
+                                  color='#4B0082', alpha=0.3 * crack_p, zorder=5)
+            ax.add_patch(glow)
+
+        # Phase 3: THE EYE OPENS (40-60%)
+        elif p < 0.6:
+            eye_p = (p - 0.4) / 0.2
+
+            # The void crack remains
+            crack_x = WIDTH / 2
+            crack_y = HEIGHT / 2
+
+            # Draw the crack
+            for i in range(20):
+                offset_x = np.sin(i * 0.7) * 30
+                y_pos = crack_y - 150 + (i / 20) * 300
+                ax.plot([crack_x + offset_x - 5, crack_x + offset_x + 5],
+                       [y_pos, y_pos], color='#4B0082', linewidth=2, alpha=1, zorder=10)
+
+            # THE EYE - opens slowly
+            eye_height = 80 * eye_p  # Eye opens vertically
+            eye_width = 200
+
+            # Outer eye (dark purple void)
+            outer_eye = patches.Ellipse((crack_x, crack_y), eye_width, eye_height,
+                                        color='#1a0020', alpha=1, zorder=15)
+            ax.add_patch(outer_eye)
+
+            # Inner eye (glowing crimson)
+            inner_eye = patches.Ellipse((crack_x, crack_y), eye_width * 0.7, eye_height * 0.8,
+                                        color='#8B0000', alpha=eye_p, zorder=16)
+            ax.add_patch(inner_eye)
+
+            # The pupil (pure void black with golden ring)
+            if eye_p > 0.3:
+                pupil = patches.Circle((crack_x, crack_y), 25, color='#000000', zorder=17)
+                ax.add_patch(pupil)
+
+                # Golden ring around pupil (ancient power)
+                ring = patches.Circle((crack_x, crack_y), 30, fill=False,
+                                      edgecolor='#FFD700', linewidth=2, alpha=eye_p, zorder=18)
+                ax.add_patch(ring)
+
+        # Phase 4: THE VOICE (60-85%)
+        elif p < 0.85:
+            voice_p = (p - 0.6) / 0.25
+
+            # The eye, fully open
+            crack_x = WIDTH / 2
+            crack_y = HEIGHT / 2
+
+            # Pulsing effect
+            pulse = 1 + 0.1 * np.sin(local * 0.2)
+
+            # Outer eye
+            outer_eye = patches.Ellipse((crack_x, crack_y), 200 * pulse, 80 * pulse,
+                                        color='#1a0020', alpha=1, zorder=15)
+            ax.add_patch(outer_eye)
+
+            # Inner eye (pulsing crimson)
+            inner_eye = patches.Ellipse((crack_x, crack_y), 140 * pulse, 64 * pulse,
+                                        color='#8B0000', alpha=1, zorder=16)
+            ax.add_patch(inner_eye)
+
+            # Pupil
+            pupil = patches.Circle((crack_x, crack_y), 25 * pulse, color='#000000', zorder=17)
+            ax.add_patch(pupil)
+
+            # Golden ring
+            ring = patches.Circle((crack_x, crack_y), 30 * pulse, fill=False,
+                                  edgecolor='#FFD700', linewidth=3, zorder=18)
+            ax.add_patch(ring)
+
+            # Void energy radiating outward
+            for i in range(8):
+                angle = (i / 8) * np.pi * 2 + local * 0.02
+                ray_length = 100 + 50 * np.sin(local * 0.1 + i)
+                end_x = crack_x + np.cos(angle) * ray_length
+                end_y = crack_y + np.sin(angle) * ray_length
+                ax.plot([crack_x, end_x], [crack_y, end_y],
+                       color='#4B0082', linewidth=2, alpha=0.6, zorder=14)
+
+            # THE VOICE - ominous text
+            voice_lines = [
+                "The Starborn thinks she has won...",
+                "But she has only awakened...",
+                "THE ETERNAL DARKNESS."
+            ]
+
+            line_idx = min(int(voice_p * 3), 2)
+            text_alpha = min(1, (voice_p * 3 - line_idx) * 2) if voice_p * 3 - line_idx < 0.5 else 1
+
+            ax.text(WIDTH/2, HEIGHT * 0.15, voice_lines[line_idx],
+                   fontsize=28, ha='center', color='#8B0000', alpha=text_alpha,
+                   fontweight='bold', zorder=50)
+
+        # Phase 5: TITLE REVEAL (85-100%)
+        else:
+            reveal_p = (p - 0.85) / 0.15
+
+            # Eye slowly closes but ominously
+            crack_x = WIDTH / 2
+            crack_y = HEIGHT / 2
+
+            eye_height = 80 * (1 - reveal_p * 0.7)  # Almost closes
+
+            outer_eye = patches.Ellipse((crack_x, crack_y), 200, eye_height,
+                                        color='#1a0020', alpha=1 - reveal_p * 0.5, zorder=15)
+            ax.add_patch(outer_eye)
+
+            inner_eye = patches.Ellipse((crack_x, crack_y), 140, eye_height * 0.8,
+                                        color='#8B0000', alpha=1 - reveal_p * 0.5, zorder=16)
+            ax.add_patch(inner_eye)
+
+            # Sequel title fades in
+            ax.text(WIDTH/2, HEIGHT * 0.8, "ELI IS A FROG II",
+                   fontsize=50, ha='center', color='#90EE90', alpha=reveal_p,
+                   fontweight='bold', zorder=50)
+
+            ax.text(WIDTH/2, HEIGHT * 0.72, "THE VOID AWAKENS",
+                   fontsize=35, ha='center', color='#4B0082', alpha=reveal_p,
+                   fontweight='bold', zorder=50)
+
+            ax.text(WIDTH/2, HEIGHT * 0.65, "Coming Soon...",
+                   fontsize=20, ha='center', color='#888888', alpha=reveal_p * 0.7,
+                   zorder=50)
+
+        # Cinematic letterbox throughout
+        ctx['camera'].render_letterbox(ax)
 
 
 class MentorSacrificeScene(Scene):
@@ -7585,15 +7842,15 @@ def build_scenes() -> List[Scene]:
     # ═══════════════════════════════════════════════════════════════════════════
 
     # Chapter 17: The Mysterious Huuters
-    scenes.append(ChapterScene(f, 180, 17, "The Mysterious Huuters")); f += 180
+    scenes.append(ChapterScene(f, 180, 17, "Where Seven Ley Lines Meet")); f += 180
     scenes.append(HuutersDiscoveryScene(f, 900)); f += 900  # 15 sec discovery
 
     # Chapter 18: Bella - Love at First Sight
-    scenes.append(ChapterScene(f, 180, 18, "Bella")); f += 180
+    scenes.append(ChapterScene(f, 180, 18, "The Last of the Starborn")); f += 180
     scenes.append(HuutersMeetingScene(f, 1200)); f += 1200  # 20 sec romantic meeting
 
     # Chapter 19: The Desperate Ride - CLIMACTIC DANGEROUS HORSE ESCAPE!
-    scenes.append(ChapterScene(f, 180, 19, "The Desperate Ride")); f += 180
+    scenes.append(ChapterScene(f, 180, 19, "Through Fire and Void")); f += 180
     scenes.append(DangerousHorseRideScene(f, 2400)); f += 2400  # 40 sec INSANELY DRAMATIC ride!
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -7711,6 +7968,9 @@ def build_scenes() -> List[Scene]:
     # ═══════════════════════════════════════════════════════════════════════════
 
     scenes.append(CreditsScene(f, 1500)); f += 1500  # 25 sec credits
+
+    # POST-CREDITS STINGER - The Void Awakens teaser!
+    scenes.append(PostCreditsScene(f, 900)); f += 900  # 15 sec sequel tease
 
     # Print statistics
     print("═" * 70)
