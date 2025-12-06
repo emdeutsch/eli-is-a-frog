@@ -3300,11 +3300,12 @@ class TransformScene(Scene):
 
 
 class BattleScene(Scene):
-    """Boss battle"""
+    """Epic boss battle with slow-motion finishing moves"""
     def __init__(self, start: int, duration: int, boss_type: str):
         super().__init__(start, duration)
         self.boss_type = boss_type
         self.env = BattleArenaEnvironment()
+        self.slowmo_triggered = False
 
     def render(self, ax, frame: int, ctx: dict):
         p = self.progress(frame)
@@ -3319,7 +3320,18 @@ class BattleScene(Scene):
         else:
             boss = TheDarkOne(WIDTH * 0.65, HEIGHT * 0.5, 2.5)
 
-        hero = Frog(WIDTH * 0.25, HEIGHT * 0.35, 1.2)
+        # Hero position changes during battle - dramatic movement
+        hero_x = WIDTH * 0.25 + np.sin(local * 0.02) * 50
+        hero_y = HEIGHT * 0.35 + np.cos(local * 0.015) * 20
+
+        # Final blow positioning
+        if p > 0.8 and p < 0.92:
+            # Hero charges forward for the kill
+            charge_p = (p - 0.8) / 0.12
+            hero_x = lerp(WIDTH * 0.25, WIDTH * 0.55, Easing.ease_out_cubic(charge_p))
+            hero_y = HEIGHT * 0.35 + np.sin(charge_p * np.pi) * 100  # Jump arc
+
+        hero = Frog(hero_x, hero_y, 1.2)
         hero.emotion = Emotion.DETERMINED if p < 0.7 else Emotion.POWERFUL
         hero.set_glow(p > 0.5, '#00FF7F', min(1, (p - 0.5) * 2))
 
@@ -3327,7 +3339,15 @@ class BattleScene(Scene):
         if hasattr(boss, 'is_attacking'):
             boss.is_attacking = (local % 50) < 25
 
-        # Combat
+        # SLOW MOTION during finishing blow!
+        if p > 0.78 and p < 0.88 and not self.slowmo_triggered:
+            ctx['slowmo'].enter_slowmo(0.3, with_vignette=True)
+            self.slowmo_triggered = True
+        elif p > 0.88 and self.slowmo_triggered:
+            ctx['slowmo'].exit_slowmo()
+            self.slowmo_triggered = False
+
+        # Combat with enhanced effects
         if local % 40 == 0 and p < 0.9:
             hero.jump(10)
             ctx['particles'].emit_magic(hero.x, hero.y, 'green', 1.2)
@@ -3335,19 +3355,266 @@ class BattleScene(Scene):
         if local % 55 == 25:
             ctx['particles'].emit_dark_energy(boss.x, boss.y, 1.0)
 
+        # Big explosion on finishing blow
+        if p > 0.85 and p < 0.87:
+            ctx['particles'].emit_explosion(boss.x, boss.y, 3.0)
+            ctx['camera'].shake(25, 0.85)
+            for i in range(5):
+                ctx['particles'].emit_magic(boss.x + np.random.randn() * 50,
+                                           boss.y + np.random.randn() * 50, 'gold', 2.0)
+
         boss.render(ax, local)
         hero.render(ax, local)
 
-        # Health bars
+        # Render slow-mo effects
+        ctx['slowmo'].render_effects(ax)
+
+        # Health bars with pulsing effect when low
         boss_hp = max(0, 100 - p * 105)
+        pulse = 1.0 if boss_hp > 20 else 1.0 + np.sin(local * 0.3) * 0.1
         ax.add_patch(patches.Rectangle((WIDTH/2 - 180, HEIGHT - 55), 360, 25, color='#222', zorder=200))
-        ax.add_patch(patches.Rectangle((WIDTH/2 - 175, HEIGHT - 52), 350 * boss_hp / 100, 19, color='#FF0000', zorder=201))
+        bar_color = '#FF0000' if boss_hp > 20 else '#FF4444'
+        ax.add_patch(patches.Rectangle((WIDTH/2 - 175, HEIGHT - 52), 350 * boss_hp / 100 * pulse, 19, color=bar_color, zorder=201))
         ax.text(WIDTH/2, HEIGHT - 75, self.boss_type.upper().replace('_', ' '), fontsize=18, ha='center', color='#FF4444', fontweight='bold', zorder=202)
 
-        # Victory
+        # Epic victory sequence
         if p > 0.92:
-            ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT, color='white', alpha=(p - 0.92) / 0.08 * 0.7, zorder=300))
-            ax.text(WIDTH/2, HEIGHT/2, "VICTORY!", fontsize=70, ha='center', va='center', color='#FFD700', alpha=(p - 0.92) / 0.08, fontweight='bold', zorder=301)
+            victory_p = (p - 0.92) / 0.08
+            # Screen flash
+            ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT, color='white', alpha=victory_p * 0.7, zorder=300))
+            # Pulsing victory text
+            text_scale = 1 + np.sin(local * 0.2) * 0.1
+            ax.text(WIDTH/2, HEIGHT/2, "VICTORY!", fontsize=int(70 * text_scale), ha='center', va='center',
+                   color='#FFD700', alpha=victory_p, fontweight='bold', zorder=301)
+            # Particle celebration
+            if local % 5 == 0:
+                ctx['particles'].emit_magic(np.random.uniform(100, WIDTH-100), HEIGHT * 0.7, 'gold', 1.5)
+
+
+class HeroicRiseScene(Scene):
+    """Eli falls, appears defeated, then dramatically rises with new power"""
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+
+        # Dark, hopeless background
+        darkness = max(0, 0.9 - p * 0.5 if p > 0.6 else 0.9)
+        ax.set_facecolor(f'#{int(10 + (1-darkness)*40):02x}{int(5 + (1-darkness)*30):02x}{int(15 + (1-darkness)*20):02x}')
+
+        # Phase 1: Eli falls (0-30%)
+        if p < 0.3:
+            fall_p = p / 0.3
+            eli_y = HEIGHT * 0.5 - Easing.ease_in_cubic(fall_p) * HEIGHT * 0.35
+            eli = Frog(WIDTH * 0.5, eli_y, 1.2 - fall_p * 0.3)
+            eli.emotion = Emotion.SAD
+            eli.alpha = 1.0 - fall_p * 0.3
+            eli.render(ax, local)
+
+            # Impact shake
+            if fall_p > 0.9:
+                ctx['camera'].shake(20, 0.9)
+
+        # Phase 2: Darkness and despair (30-50%)
+        elif p < 0.5:
+            despair_p = (p - 0.3) / 0.2
+            # Eli lying on ground
+            eli = Frog(WIDTH * 0.5, HEIGHT * 0.15, 0.9)
+            eli.emotion = Emotion.SAD
+            eli.alpha = 0.7 - despair_p * 0.3
+            eli.render(ax, local)
+
+            # Sad text
+            ax.text(WIDTH/2, HEIGHT * 0.7, "All hope is lost...", fontsize=28,
+                   ha='center', color='#666666', alpha=despair_p, style='italic', zorder=100)
+
+            # Friends crying in background
+            luna = Frog(WIDTH * 0.3, HEIGHT * 0.2, 0.7, 'princess', 'Luna')
+            luna.emotion = Emotion.SAD
+            luna.alpha = 0.5
+            luna.render(ax, local)
+
+        # Phase 3: The spark of hope (50-65%)
+        elif p < 0.65:
+            spark_p = (p - 0.5) / 0.15
+            # Heartbeat pulse
+            pulse = np.sin(spark_p * np.pi * 4) * 0.5 + 0.5
+
+            # Small light appears
+            glow_radius = spark_p * 100
+            for i in range(5):
+                ax.add_patch(patches.Circle((WIDTH * 0.5, HEIGHT * 0.2), glow_radius + i * 20,
+                            color='#00FF7F', alpha=pulse * 0.1 * (1 - i * 0.15), zorder=50))
+
+            # Eli still down but glowing
+            eli = Frog(WIDTH * 0.5, HEIGHT * 0.15, 0.9)
+            eli.set_glow(True, '#00FF7F', spark_p * pulse)
+            eli.render(ax, local)
+
+            ax.text(WIDTH/2, HEIGHT * 0.7, "But wait...", fontsize=24,
+                   ha='center', color='#00FF7F', alpha=spark_p, zorder=100)
+
+        # Phase 4: THE RISE (65-85%)
+        elif p < 0.85:
+            rise_p = (p - 0.65) / 0.2
+            eased = Easing.ease_out_elastic(min(1, rise_p * 1.2))
+
+            # Eli rises dramatically
+            eli_y = HEIGHT * 0.15 + eased * HEIGHT * 0.35
+            eli_scale = 0.9 + eased * 0.6
+
+            eli = Frog(WIDTH * 0.5, eli_y, eli_scale)
+            eli.emotion = Emotion.POWERFUL
+            eli.has_crown = rise_p > 0.5
+            eli.set_glow(True, '#00FF7F', min(1, eased * 1.5))
+            eli.render(ax, local)
+
+            # Massive energy burst
+            for i in range(8):
+                ring_radius = rise_p * 300 + i * 40
+                ax.add_patch(patches.Circle((WIDTH * 0.5, eli_y), ring_radius,
+                            fill=False, edgecolor='#00FF7F', linewidth=4 - i * 0.4,
+                            alpha=max(0, 0.8 - rise_p * 0.5 - i * 0.08), zorder=45))
+
+            # Screen shake and particles
+            ctx['camera'].shake(15 * (1 - rise_p), 0.9)
+            if local % 3 == 0:
+                ctx['particles'].emit_magic(WIDTH * 0.5 + np.random.randn() * 100,
+                                           eli_y + np.random.randn() * 50, 'green', 2.0)
+
+            # Epic text
+            if rise_p > 0.3:
+                text_alpha = min(1, (rise_p - 0.3) / 0.3)
+                ax.text(WIDTH/2, HEIGHT * 0.85, "I AM THE EMERALD GUARDIAN!",
+                       fontsize=36, ha='center', fontweight='bold',
+                       color='#00FF7F', alpha=text_alpha, zorder=100)
+
+        # Phase 5: Full power pose (85-100%)
+        else:
+            power_p = (p - 0.85) / 0.15
+
+            # Powerful Eli
+            eli = Frog(WIDTH * 0.5, HEIGHT * 0.5, 1.5)
+            eli.emotion = Emotion.POWERFUL
+            eli.has_crown = True
+            eli.set_glow(True, '#FFD700', 0.8 + np.sin(local * 0.1) * 0.2)
+            eli.render(ax, local)
+
+            # Golden aura
+            for i in range(6):
+                ax.add_patch(patches.Circle((WIDTH * 0.5, HEIGHT * 0.5), 150 + i * 30,
+                            fill=False, edgecolor='#FFD700', linewidth=3,
+                            alpha=0.4 - i * 0.06, zorder=40))
+
+            # Continuous particles
+            if local % 4 == 0:
+                angle = local * 0.05
+                px = WIDTH * 0.5 + np.cos(angle) * 150
+                py = HEIGHT * 0.5 + np.sin(angle) * 100
+                ctx['particles'].emit_magic(px, py, 'gold', 1.0)
+
+
+class WeddingScene(Scene):
+    """Beautiful wedding between Eli and Luna - the happy ending"""
+    def render(self, ax, frame: int, ctx: dict):
+        p = self.progress(frame)
+        local = frame - self.start
+
+        # Beautiful sunset gradient background
+        for i in range(20):
+            y = HEIGHT * i / 20
+            t = i / 20
+            r = int(lerp(255, 135, t))
+            g = int(lerp(200, 206, t))
+            b = int(lerp(150, 235, t))
+            ax.add_patch(patches.Rectangle((0, y), WIDTH, HEIGHT/20 + 1,
+                        color=f'#{r:02x}{g:02x}{b:02x}', zorder=1))
+
+        # Floating hearts
+        np.random.seed(42)
+        for i in range(20):
+            hx = (np.random.rand() * WIDTH + local * 0.5) % WIDTH
+            hy = np.random.rand() * HEIGHT * 0.5 + HEIGHT * 0.4
+            size = 15 + np.random.rand() * 15
+            alpha = 0.3 + np.sin(local * 0.05 + i) * 0.2
+            ax.text(hx, hy, '♥', fontsize=int(size), color='#FF69B4',
+                   alpha=clamp(alpha, 0.1, 0.6), ha='center', zorder=5)
+
+        # Draw flower arch
+        for i in range(40):
+            angle = np.pi * 0.15 + (i / 40) * np.pi * 0.7
+            fx = WIDTH * 0.5 + np.cos(angle) * 220
+            fy = HEIGHT * 0.6 + np.sin(angle) * 160
+            colors = ['#FF69B4', '#FFB6C1', '#FFFFFF', '#FF1493', '#FFD700']
+            flower_color = colors[i % len(colors)]
+            ax.add_patch(patches.Circle((fx, fy), 12 + np.sin(local * 0.1 + i) * 3,
+                        color=flower_color, alpha=0.8, zorder=10))
+
+        # Grass/ground
+        ax.add_patch(patches.Rectangle((0, 0), WIDTH, HEIGHT * 0.25, color='#228B22', zorder=2))
+
+        # Aisle with flower petals
+        ax.add_patch(patches.Rectangle((WIDTH * 0.35, 0), WIDTH * 0.3, HEIGHT * 0.25,
+                    color='#FFFFFF', alpha=0.3, zorder=3))
+
+        # The happy couple
+        eli = Frog(WIDTH * 0.45, HEIGHT * 0.28, 1.3)
+        eli.emotion = Emotion.LOVE
+        eli.has_crown = True
+        eli.set_glow(True, '#FFD700', 0.3)
+        eli.render(ax, local)
+
+        luna = Frog(WIDTH * 0.55, HEIGHT * 0.28, 1.2, 'princess', 'Luna')
+        luna.emotion = Emotion.LOVE
+        luna.render(ax, local)
+
+        # Kiss moment!
+        if p > 0.4 and p < 0.7:
+            kiss_p = (p - 0.4) / 0.3
+            # Hearts burst out
+            if local % 8 == 0:
+                ctx['particles'].emit_magic(WIDTH * 0.5, HEIGHT * 0.35, 'pink', 1.0)
+
+            # Sparkles around them
+            for i in range(8):
+                angle = (i / 8) * 2 * np.pi + local * 0.03
+                sx = WIDTH * 0.5 + np.cos(angle) * (80 + kiss_p * 40)
+                sy = HEIGHT * 0.3 + np.sin(angle) * 50
+                ax.scatter([sx], [sy], c='#FFD700', s=50, alpha=0.7, zorder=50)
+
+        # Crowd cheering (other frogs)
+        for i in range(15):
+            row = i // 5
+            col = i % 5
+            fx = WIDTH * (0.15 + col * 0.08) if col < 2.5 else WIDTH * (0.62 + (col - 2.5) * 0.08)
+            fy = HEIGHT * (0.12 + row * 0.04)
+            bounce = abs(np.sin(local * 0.1 + i * 0.5)) * 8 if p > 0.3 else 0
+            frog = Frog(fx, fy + bounce, 0.4)
+            frog.emotion = Emotion.HAPPY
+            frog.render(ax, local)
+
+        # Sage officiating
+        sage = WiseTurtle(WIDTH * 0.5, HEIGHT * 0.38, 1.0)
+        sage.render(ax, local)
+
+        # Spark flying around joyfully
+        spark_x = WIDTH * 0.5 + np.sin(local * 0.08) * 150
+        spark_y = HEIGHT * 0.55 + np.cos(local * 0.06) * 50
+        spark = Dragonfly(spark_x, spark_y, 0.6)
+        spark.render(ax, local)
+
+        # "Happily Ever After" text
+        if p > 0.75:
+            text_p = (p - 0.75) / 0.25
+            text_y = HEIGHT * 0.8 + (1 - Easing.ease_out_cubic(text_p)) * 30
+            ax.text(WIDTH/2, text_y, "And they lived happily ever after...",
+                   fontsize=32, ha='center', style='italic',
+                   color='#8B4513', alpha=text_p, zorder=100)
+
+        # Confetti!
+        if p > 0.5:
+            if local % 4 == 0:
+                ctx['particles'].emit_magic(np.random.uniform(100, WIDTH-100),
+                                           HEIGHT * 0.9, 'gold', 0.8)
 
 
 class CreditsScene(Scene):
@@ -4311,23 +4578,28 @@ def build_scenes() -> List[Scene]:
 
     # Chapter 22: The Sacrifice
     scenes.append(ChapterScene(f, 180, 22, "The Ultimate Sacrifice")); f += 180
-    scenes.append(SacrificeScene(f, 900, True)); f += 900  # 15 sec sacrifice
+    scenes.append(SacrificeScene(f, 1200, True)); f += 1200  # 20 sec sacrifice (extended)
 
     # Chapter 23: Final Boss - The Dark One
     scenes.append(ChapterScene(f, 180, 23, "The Dark One")); f += 180
-    scenes.append(BattleScene(f, 1500, 'dark_one')); f += 1500  # 25 sec final boss
+    scenes.append(BattleScene(f, 1800, 'dark_one')); f += 1800  # 30 sec final boss (extended)
 
     # ═══════════════════════════════════════════════════════════════════════════
-    #                    ACT VIII - RESURRECTION (Chapters 24-26)
+    #                    ACT VIII - THE DARKEST HOUR (Chapters 24-26)
     # ═══════════════════════════════════════════════════════════════════════════
 
-    # Chapter 24: The Prophecy Fulfilled
-    scenes.append(ChapterScene(f, 180, 24, "The Prophecy Fulfilled")); f += 180
-    scenes.append(SacrificeScene(f, 900, False)); f += 900  # 15 sec resurrection
+    # Chapter 24: All Hope Lost
+    scenes.append(ChapterScene(f, 180, 24, "All Hope Lost")); f += 180
+    # Eli appears defeated - dramatic moment
+    scenes.append(HeroicRiseScene(f, 1500)); f += 1500  # 25 sec dramatic rise!
 
-    # Chapter 25: Victory
-    scenes.append(ChapterScene(f, 180, 25, "Victory")); f += 180
-    s = StoryScene(f, 720, 'pond', 'dawn'); f += 720
+    # Chapter 25: The Prophecy Fulfilled
+    scenes.append(ChapterScene(f, 180, 25, "The Prophecy Fulfilled")); f += 180
+    scenes.append(SacrificeScene(f, 1200, False)); f += 1200  # 20 sec resurrection (extended)
+
+    # Chapter 26: Victory
+    scenes.append(ChapterScene(f, 180, 26, "Victory")); f += 180
+    s = StoryScene(f, 900, 'pond', 'dawn'); f += 900  # Extended
     hero = Frog(WIDTH * 0.5, HEIGHT * 0.22, 1.5)
     hero.has_crown = True
     hero.emotion = Emotion.POWERFUL
@@ -4337,27 +4609,31 @@ def build_scenes() -> List[Scene]:
     s.add_char(WiseTurtle(WIDTH * 0.7, HEIGHT * 0.22, 1.0))
     scenes.append(s)
 
-    # Chapter 26: The Coronation
-    scenes.append(ChapterScene(f, 180, 26, "The Coronation")); f += 180
-    scenes.append(CoronationScene(f, 1200)); f += 1200  # 20 sec celebration
-
     # ═══════════════════════════════════════════════════════════════════════════
-    #                    ACT IX - EPILOGUE (Chapters 27-28)
+    #                    ACT IX - HAPPILY EVER AFTER (Chapters 27-30)
     # ═══════════════════════════════════════════════════════════════════════════
 
-    # Chapter 27: Peace Restored
-    scenes.append(ChapterScene(f, 180, 27, "Peace Restored")); f += 180
-    s = StoryScene(f, 720, 'village', 'day'); f += 720
-    # Many happy frogs
-    for i in range(5):
-        frog = Frog(WIDTH * (0.15 + i * 0.15), HEIGHT * (0.2 + (i % 2) * 0.05), 0.7)
+    # Chapter 27: The Coronation
+    scenes.append(ChapterScene(f, 180, 27, "The Coronation")); f += 180
+    scenes.append(CoronationScene(f, 1500)); f += 1500  # 25 sec celebration (extended)
+
+    # Chapter 28: The Royal Wedding
+    scenes.append(ChapterScene(f, 180, 28, "The Royal Wedding")); f += 180
+    scenes.append(WeddingScene(f, 1500)); f += 1500  # 25 sec wedding - NEW!
+
+    # Chapter 29: Peace Restored
+    scenes.append(ChapterScene(f, 180, 29, "Peace Restored")); f += 180
+    s = StoryScene(f, 900, 'village', 'day'); f += 900  # Extended
+    # Many happy frogs celebrating
+    for i in range(8):
+        frog = Frog(WIDTH * (0.1 + i * 0.1), HEIGHT * (0.18 + (i % 3) * 0.04), 0.6)
         frog.emotion = Emotion.HAPPY
         s.add_char(frog)
     scenes.append(s)
 
-    # Chapter 28: The Legend Lives On
-    scenes.append(ChapterScene(f, 180, 28, "The Legend Lives On")); f += 180
-    s = StoryScene(f, 600, 'pond', 'sunset'); f += 600
+    # Chapter 30: The Legend Lives On
+    scenes.append(ChapterScene(f, 180, 30, "The Legend Lives On")); f += 180
+    s = StoryScene(f, 900, 'pond', 'sunset'); f += 900  # Extended
     hero = Frog(WIDTH * 0.5, HEIGHT * 0.22, 1.3)
     hero.has_crown = True
     hero.emotion = Emotion.HAPPY
