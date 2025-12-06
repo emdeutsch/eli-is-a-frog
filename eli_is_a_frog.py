@@ -2791,6 +2791,12 @@ class SlowMotionManager:
         """Get the time delta for this frame"""
         return self.time_scale
 
+    def get_effective_frame(self, frame: int) -> int:
+        """Get the effective frame number accounting for slow motion"""
+        # In slow motion, we want to slow down the animation
+        # For simplicity, just return the frame as-is (slow-mo is visual effect only)
+        return frame
+
     def render_effects(self, ax):
         """Render slow-motion visual effects"""
         if self.vignette_intensity > 0.01:
